@@ -1,0 +1,18 @@
+{
+  "Inputs" : {
+    "image" : {
+      "MLFeatureShortDescription" : "Input image to be processed"
+    }
+  },
+  "Outputs" : {
+    "final_emb_1" : {
+      "MLFeatureShortDescription" : "the clip embedding of the input image"
+    }
+  },
+  "TrainingInputs" : {
+
+  },
+  "States" : {
+
+  }
+}

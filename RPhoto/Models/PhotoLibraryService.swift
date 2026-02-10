@@ -70,6 +70,29 @@ struct PhotoLibraryService {
         return result.firstObject != nil
     }
 
+    func existingAssetIdentifiers(localIdentifiers: [String]) -> Set<String> {
+        guard !localIdentifiers.isEmpty else {
+            return []
+        }
+
+        let chunkSize = 1000
+        var existingIds = Set<String>()
+        existingIds.reserveCapacity(localIdentifiers.count)
+
+        var start = 0
+        while start < localIdentifiers.count {
+            let end = min(start + chunkSize, localIdentifiers.count)
+            let chunk = Array(localIdentifiers[start..<end])
+            let result = PHAsset.fetchAssets(withLocalIdentifiers: chunk, options: nil)
+            result.enumerateObjects { asset, _, _ in
+                existingIds.insert(asset.localIdentifier)
+            }
+            start = end
+        }
+
+        return existingIds
+    }
+
     func loadUIImage(localIdentifier: String, targetSize: CGSize) async -> UIImage? {
         guard let asset = fetchAsset(localIdentifier: localIdentifier) else {
             return nil

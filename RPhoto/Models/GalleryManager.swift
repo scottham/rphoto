@@ -24,6 +24,9 @@ class GalleryManager: ObservableObject {
     @Published var isProcessing = false
     @Published var processingProgress: Double = 0
     @Published var processingStatusText = "Processing Images..."
+    @Published var isSearching = false
+    @Published var searchProgress: Double = 0
+    @Published var searchStatusText = "Searching photos..."
     @Published var photoAuthorizationStatus: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     @Published var topK: Int = 20 {
         didSet {
@@ -120,7 +123,10 @@ class GalleryManager: ObservableObject {
         // perform one initial sync. Later permission updates are always manual via Sync button.
         if previousStatus == .notDetermined, !hasPersistedGalleryData(context: context) {
             await syncAccessibleAssetsForCurrentPermission(context: context)
+            return
         }
+
+        await restoreCachedIndexOnLaunch(context: context)
     }
 
     func requestOrSyncPhotoAccess(context: ModelContext) async {
@@ -281,10 +287,17 @@ class GalleryManager: ObservableObject {
         }
 
         migrateSelectedAssetsFromLegacyCacheIfNeeded(context: context)
+        processingStatusText = "Validating photo references..."
         await cleanupStaleAssets(context: context)
+        processingStatusText = "Loading cached embeddings..."
         hydrateFromCache(context: context)
         processingProgress = selectedAssetIds.isEmpty ? 1.0 : 0.5
-        await backfillMissingEmbeddings(context: context)
+        processingStatusText = "Encoding missing embeddings..."
+        await backfillMissingEmbeddings(
+            context: context,
+            progressStart: 0.5,
+            progressSpan: 0.5
+        )
         processingProgress = 1.0
 
         hasPreparedIndexForCurrentModel = true
@@ -297,10 +310,12 @@ class GalleryManager: ObservableObject {
 
         do {
             let selectedAssets = try context.fetch(FetchDescriptor<SelectedAsset>())
+            let selectedIds = selectedAssets.map(\.id)
+            let existingIds = photoLibraryService.existingAssetIdentifiers(localIdentifiers: selectedIds)
             var staleIds: [String] = []
 
             for asset in selectedAssets {
-                if photoLibraryService.assetExists(localIdentifier: asset.id) {
+                if existingIds.contains(asset.id) {
                     asset.lastValidatedAt = Date()
                 } else {
                     staleIds.append(asset.id)
@@ -319,16 +334,29 @@ class GalleryManager: ObservableObject {
 
         guard !text.isEmpty else {
             displayedImages = []
+            isSearching = false
+            searchProgress = 0
+            searchStatusText = "Searching photos..."
             return
+        }
+
+        isSearching = true
+        searchProgress = 0
+        searchStatusText = "Preparing search index..."
+        defer {
+            isSearching = false
         }
 
         await ensureIndexReady(context: context)
         guard !allImages.isEmpty else {
             displayedImages = []
+            searchProgress = 1
+            searchStatusText = "No indexed photos available."
             return
         }
 
         do {
+            searchStatusText = "Encoding query..."
             let tokenIds = await tokenizer.get().encode_full(
                 text: text,
                 padTokenId: selectedModel.padTokenId
@@ -339,17 +367,25 @@ class GalleryManager: ObservableObject {
             }
 
             let textEmbedding = try await model.encode(text: inputBox)
+            searchProgress = 0.15
+            searchStatusText = "Calculating similarities..."
+            await scoreAllImages(
+                using: textEmbedding,
+                progressStart: 0.15,
+                progressSpan: 0.65
+            )
 
-            for index in 0..<allImages.count {
-                allImages[index].similarityScore = cosineSimilarity(
-                    allImages[index].embedding,
-                    textEmbedding
-                )
-            }
-
-            await updateDisplayedImages()
+            searchStatusText = "Loading top results..."
+            await updateDisplayedImages(
+                searchProgressStart: 0.8,
+                searchProgressSpan: 0.2
+            )
+            searchProgress = 1
+            searchStatusText = "Search completed."
         } catch {
             print("Search failed: \(error)")
+            searchProgress = 0
+            searchStatusText = "Search failed."
         }
     }
 
@@ -424,7 +460,11 @@ class GalleryManager: ObservableObject {
         }
     }
 
-    private func backfillMissingEmbeddings(context: ModelContext) async {
+    private func backfillMissingEmbeddings(
+        context: ModelContext,
+        progressStart: Double,
+        progressSpan: Double
+    ) async {
         let existingIds = Set(allImages.map(\.sourceId))
         let missingIds = selectedAssetIds.filter { !existingIds.contains($0) }
         guard !missingIds.isEmpty else { return }
@@ -434,7 +474,8 @@ class GalleryManager: ObservableObject {
 
         for (offset, id) in missingIds.enumerated() {
             defer {
-                processingProgress = 0.5 + (Double(offset + 1) / total * 0.5)
+                let progress = progressStart + (Double(offset + 1) / total * progressSpan)
+                processingProgress = min(max(progress, 0), 1)
             }
 
             guard photoLibraryService.assetExists(localIdentifier: id) else {
@@ -476,7 +517,38 @@ class GalleryManager: ObservableObject {
         newlyEncodedCount = encodedCount
     }
 
-    private func updateDisplayedImages() async {
+    private func scoreAllImages(
+        using textEmbedding: MLMultiArray,
+        progressStart: Double,
+        progressSpan: Double
+    ) async {
+        let total = allImages.count
+        guard total > 0 else { return }
+
+        let updateStride = max(total / 30, 1)
+
+        for index in 0..<total {
+            allImages[index].similarityScore = cosineSimilarity(
+                allImages[index].embedding,
+                textEmbedding
+            )
+
+            if index % updateStride == 0 || index == total - 1 {
+                let fraction = Double(index + 1) / Double(total)
+                let progress = progressStart + fraction * progressSpan
+                searchProgress = min(max(progress, 0), 1)
+            }
+
+            if index % 200 == 0 {
+                await Task.yield()
+            }
+        }
+    }
+
+    private func updateDisplayedImages(
+        searchProgressStart: Double? = nil,
+        searchProgressSpan: Double = 0
+    ) async {
         if lastSearchText.isEmpty {
             displayedImages = []
             return
@@ -486,11 +558,12 @@ class GalleryManager: ObservableObject {
             allImages[$0].similarityScore > allImages[$1].similarityScore
         }
         let topIndices = sortedIndices.prefix(topK)
+        let topCount = topIndices.count
 
         let thumbnailSize = CGSize(width: 600, height: 600)
         var resultImages: [GalleryImage] = []
 
-        for index in topIndices {
+        for (offset, index) in topIndices.enumerated() {
             var image = allImages[index]
 
             if image.image == nil {
@@ -504,6 +577,12 @@ class GalleryManager: ObservableObject {
             }
 
             resultImages.append(image)
+
+            if let searchProgressStart {
+                let fraction = topCount == 0 ? 1 : Double(offset + 1) / Double(topCount)
+                let progress = searchProgressStart + fraction * searchProgressSpan
+                searchProgress = min(max(progress, 0), 1)
+            }
         }
 
         displayedImages = resultImages.filter { $0.image != nil }
@@ -573,7 +652,7 @@ class GalleryManager: ObservableObject {
         guard !isPreparingIndex else { return }
         isPreparingIndex = true
         isProcessing = true
-        processingStatusText = "Analyzing accessible photos..."
+        processingStatusText = "Scanning accessible photos..."
         processingProgress = 0
         newlyEncodedCount = 0
         newlyLoadedFromCacheCount = 0
@@ -607,11 +686,50 @@ class GalleryManager: ObservableObject {
         }
 
         selectedAssetIds = sortedAccessibleIds
+        processingStatusText = "Loading cached embeddings..."
         hydrateFromCache(context: context)
-        processingProgress = selectedAssetIds.isEmpty ? 1.0 : 0.5
-        await backfillMissingEmbeddings(context: context)
+        processingProgress = selectedAssetIds.isEmpty ? 1.0 : 0
+        processingStatusText = "Encoding new photos..."
+        await backfillMissingEmbeddings(
+            context: context,
+            progressStart: 0,
+            progressSpan: 1
+        )
         processingProgress = 1.0
         hasPreparedIndexForCurrentModel = true
+    }
+
+    private func restoreCachedIndexOnLaunch(context: ModelContext) async {
+        guard !isPreparingIndex else { return }
+        isPreparingIndex = true
+        isProcessing = true
+        processingStatusText = "Loading cached index..."
+        processingProgress = 0
+        newlyEncodedCount = 0
+        newlyLoadedFromCacheCount = 0
+
+        defer {
+            isPreparingIndex = false
+            isProcessing = false
+        }
+
+        migrateSelectedAssetsFromLegacyCacheIfNeeded(context: context)
+        processingProgress = 0.25
+        processingStatusText = "Reading cached embeddings..."
+        hydrateFromCache(context: context)
+        processingProgress = 0.9
+        processingStatusText = "Cache ready."
+        processingProgress = 1.0
+
+        // Mark as prepared only when cache exists for current model.
+        // If cache is missing (e.g., model changed), search can still trigger backfill on demand.
+        hasPreparedIndexForCurrentModel = !allImages.isEmpty
+
+        // Run stale cleanup after cache restoration so app startup is not blocked.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.cleanupStaleAssets(context: context)
+        }
     }
 
     private func cleanupStaleAssets(ids: [String], context: ModelContext) {
@@ -683,6 +801,9 @@ class GalleryManager: ObservableObject {
         newlyEncodedCount = 0
         newlyLoadedFromCacheCount = 0
         hasPreparedIndexForCurrentModel = false
+        isSearching = false
+        searchProgress = 0
+        searchStatusText = "Searching photos..."
     }
 
     private func cosineSimilarity(_ embedding1: MLMultiArray, _ embedding2: MLMultiArray) -> Float {

@@ -20,12 +20,25 @@ struct GallerySearchView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if manager.isProcessing {
-                    VStack {
-                        ProgressView(manager.processingStatusText, value: manager.processingProgress, total: 1.0)
-                            .padding()
-                        Text("\(Int(manager.processingProgress * 100))%")
+                if manager.isProcessing || manager.isSearching {
+                    VStack(spacing: 8) {
+                        if manager.isProcessing {
+                            ProgressView(manager.processingStatusText, value: manager.processingProgress, total: 1.0)
+                                .padding(.horizontal)
+                            Text("\(Int(manager.processingProgress * 100))%")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if manager.isSearching {
+                            ProgressView(manager.searchStatusText, value: manager.searchProgress, total: 1.0)
+                                .padding(.horizontal)
+                            Text("\(Int(manager.searchProgress * 100))%")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .padding(.top, 8)
                 }
                 
                 // Search Bar
@@ -56,7 +69,7 @@ struct GallerySearchView: View {
                 .padding(.horizontal)
                 
                 // Content
-                if manager.displayedImages.isEmpty && !manager.isProcessing {
+                if manager.displayedImages.isEmpty && !manager.isProcessing && !manager.isSearching {
                     let availableCount = max(manager.totalEncodedCount, selectedAssets.count)
                     VStack(spacing: 16) {
                         if manager.photoAuthorizationStatus == .denied || manager.photoAuthorizationStatus == .restricted {

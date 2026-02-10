@@ -2,7 +2,7 @@ name: RPhoto
 options:
   bundleIdPrefix: com.example
   deploymentTarget:
-    iOS: 17.0
+    iOS: 18.0
   xcodeVersion: 26.1.1
   groupSortPosition: top
 targets:
@@ -27,6 +27,7 @@ targets:
       - sdk: Vision.framework
       - sdk: CoreML.framework
       - sdk: PhotosUI.framework
+      - sdk: Translation.framework
 schemes:
   RPhoto:
     build:

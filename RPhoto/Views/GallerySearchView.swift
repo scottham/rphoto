@@ -9,6 +9,7 @@ import Photos
 import SwiftData
 import Translation
 import NaturalLanguage
+import UIKit
 
 private struct TranslationSearchRequest: Equatable {
     let id: UUID
@@ -456,8 +457,10 @@ private extension GallerySearchView {
 
         let detectedLanguage = detectLanguage(for: normalizedText)
         let detectedLanguageCode = detectedLanguage?.languageCode?.identifier
+        let hasEnglishDictionarySignal = isLikelyEnglishDictionaryQuery(normalizedText)
         let isEnglishInput =
             detectedLanguageCode == "en" ||
+            hasEnglishDictionarySignal ||
             (detectedLanguage == nil && isLikelyEnglishText(normalizedText))
 
         if isEnglishInput {
@@ -590,6 +593,14 @@ private extension GallerySearchView {
                         detectedLanguageCode: detectedLanguageCode,
                         statusMessage: "The detected language is not supported for translation to English. Open Apple's Translate app to verify available language packs."
                     )
+                @unknown default:
+                    await blockTranslation(
+                        requestId: requestId,
+                        rawText: rawText,
+                        decision: .blockedUnsupported,
+                        detectedLanguageCode: detectedLanguageCode,
+                        statusMessage: "Language availability returned an unknown status. Open Apple's Translate app to verify language packs, then try again."
+                    )
                 }
             } else {
                 let statusToEnglish = try await availability.status(for: rawText, to: targetEnglish)
@@ -659,6 +670,14 @@ private extension GallerySearchView {
                             statusMessage: "Unable to identify a supported source language for English translation. Open Apple's Translate app to verify language packs, then try again."
                         )
                     }
+                @unknown default:
+                    await blockTranslation(
+                        requestId: requestId,
+                        rawText: rawText,
+                        decision: .blockedUnsupported,
+                        detectedLanguageCode: nil,
+                        statusMessage: "Language availability returned an unknown status. Open Apple's Translate app to verify language packs, then try again."
+                    )
                 }
             }
         } catch {
@@ -791,6 +810,47 @@ private extension GallerySearchView {
         let asciiLikePattern = "^[A-Za-z0-9\\s\\p{P}]+$"
         let isAsciiLike = text.range(of: asciiLikePattern, options: .regularExpression) != nil
         return hasLatinLetters && isAsciiLike
+    }
+
+    func isLikelyEnglishDictionaryQuery(_ text: String) -> Bool {
+        let letterOnlyTokens = text
+            .split { !$0.isLetter }
+            .map(String.init)
+            .filter { token in
+                token.count >= 2 && token.unicodeScalars.allSatisfy { $0.isASCII }
+            }
+
+        guard !letterOnlyTokens.isEmpty else {
+            return false
+        }
+
+        let checker = UITextChecker()
+        let maxCheckedWords = 8
+        var checkedCount = 0
+        var validEnglishCount = 0
+
+        for token in letterOnlyTokens.prefix(maxCheckedWords) {
+            checkedCount += 1
+            let range = NSRange(location: 0, length: token.utf16.count)
+            let misspelledRange = checker.rangeOfMisspelledWord(
+                in: token,
+                range: range,
+                startingAt: 0,
+                wrap: false,
+                language: "en_US"
+            )
+
+            if misspelledRange.location == NSNotFound {
+                validEnglishCount += 1
+            }
+        }
+
+        guard checkedCount > 0 else {
+            return false
+        }
+
+        let validRatio = Double(validEnglishCount) / Double(checkedCount)
+        return validRatio >= 0.6
     }
 
     func syncAccessiblePhotos() {

@@ -202,11 +202,18 @@ class CLIPTokenizer {
 
         // Create the full input tokens as a multiarray of shape 1 x contextLength
         var fullTokens = Array(repeating: padTokenId, count: contextLength)
-        fullTokens[0] = encoder["<|startoftext|>"]!
-        for i in 0 ..< tokens.count {
-            fullTokens[i + 1] = tokens[i]
+        guard contextLength >= 2 else {
+            return fullTokens
         }
-        fullTokens[tokens.count + 1] = encoder["<|endoftext|>"]!
+
+        let maxBodyTokenCount = contextLength - 2
+        let clippedTokens = tokens.prefix(maxBodyTokenCount)
+
+        fullTokens[0] = encoder["<|startoftext|>"]!
+        for (index, token) in clippedTokens.enumerated() {
+            fullTokens[index + 1] = token
+        }
+        fullTokens[clippedTokens.count + 1] = encoder["<|endoftext|>"]!
         return fullTokens
 
     }

@@ -25,7 +25,7 @@ class CachedEmbedding {
 }
 
 extension CachedEmbedding {
-    func getEmbedding() throws -> MLMultiArray? {
+    func getEmbeddingVector() -> [Float]? {
         let stride = MemoryLayout<Float>.size
         guard embeddingData.count % stride == 0 else {
             print("CachedEmbedding: Invalid embedding byte length \(embeddingData.count)")
@@ -33,25 +33,37 @@ extension CachedEmbedding {
         }
 
         let count = embeddingData.count / stride
+        var values = Array(repeating: Float.zero, count: count)
+        _ = values.withUnsafeMutableBytes { destination in
+            embeddingData.copyBytes(to: destination)
+        }
+        return values
+    }
+
+    func getEmbedding() throws -> MLMultiArray? {
+        guard let values = getEmbeddingVector() else {
+            return nil
+        }
+
+        let count = values.count
         let embedding = try MLMultiArray(shape: [1, NSNumber(value: count)], dataType: .float32)
 
-        embeddingData.withUnsafeBytes { rawBuffer in
-            if let baseAddress = rawBuffer.baseAddress {
-                let dest = embedding.dataPointer.bindMemory(to: Float.self, capacity: count)
-                let src = baseAddress.bindMemory(to: Float.self, capacity: count)
-                for i in 0..<count {
-                    dest[i] = src[i]
-                }
-            }
+        let destination = embedding.dataPointer.bindMemory(to: Float.self, capacity: count)
+        for index in 0..<count {
+            destination[index] = values[index]
         }
-        
+
         return embedding
     }
-    
-    static func from(embedding: MLMultiArray, imageId: String, modelName: String) -> CachedEmbedding? {
-        let count = embedding.count
-        var data = Data(count: count * MemoryLayout<Float>.size)
 
+    static func from(vector: [Float], imageId: String, modelName: String) -> CachedEmbedding {
+        let data = vector.withUnsafeBufferPointer { buffer in
+            Data(buffer: buffer)
+        }
+        return CachedEmbedding(imageId: imageId, modelName: modelName, embeddingData: data)
+    }
+
+    static func from(embedding: MLMultiArray, imageId: String, modelName: String) -> CachedEmbedding? {
         let values: [Float]
         switch embedding.dataType {
         case .float16:
@@ -68,18 +80,6 @@ extension CachedEmbedding {
             return nil
         }
 
-        guard values.count == count else {
-            return nil
-        }
-
-        data.withUnsafeMutableBytes { rawBuffer in
-            if let dest = rawBuffer.baseAddress?.bindMemory(to: Float.self, capacity: count) {
-                for i in 0..<count {
-                    dest[i] = values[i]
-                }
-            }
-        }
-        
-        return CachedEmbedding(imageId: imageId, modelName: modelName, embeddingData: data)
+        return CachedEmbedding.from(vector: values, imageId: imageId, modelName: modelName)
     }
 }

@@ -6,7 +6,6 @@
 import CoreML
 import Foundation
 import Photos
-import PhotosUI
 import SwiftData
 import SwiftUI
 
@@ -14,7 +13,7 @@ struct GalleryImage: Identifiable {
     let id = UUID()
     let sourceId: String
     var image: UIImage?
-    let embedding: MLMultiArray
+    let embedding: [Float]
     var similarityScore: Float = 0
 }
 
@@ -156,112 +155,6 @@ class GalleryManager: ObservableObject {
         photoLibraryService.presentLimitedLibraryPickerIfPossible()
     }
 
-    func loadPhotos(from items: [PhotosPickerItem], context: ModelContext) async {
-        let itemPairs = items.compactMap { item -> (String, PhotosPickerItem)? in
-            guard let id = item.itemIdentifier else {
-                return nil
-            }
-            return (id, item)
-        }
-
-        var itemsById: [String: PhotosPickerItem] = [:]
-        for (id, item) in itemPairs {
-            itemsById[id] = item
-        }
-
-        let ids = itemsById.keys.sorted()
-        guard !ids.isEmpty else { return }
-
-        let startTime = Date()
-        isProcessing = true
-        processingStatusText = "Encoding selected photos..."
-        processingProgress = 0
-
-        let currentModelName = selectedModel.name
-
-        do {
-            let newlyInsertedIds = try persistSelectedAssets(ids: ids, context: context)
-            if hasPreparedIndexForCurrentModel, !newlyInsertedIds.isEmpty {
-                selectedAssetIds = Array(Set(selectedAssetIds + newlyInsertedIds)).sorted()
-            }
-        } catch {
-            print("Failed to persist selected assets: \(error)")
-        }
-
-        let cachedMap: [String: CachedEmbedding]
-        do {
-            cachedMap = try fetchCachedEmbeddingsMap(
-                imageIds: ids,
-                modelName: currentModelName,
-                context: context
-            )
-        } catch {
-            print("Batch fetch failed: \(error)")
-            isProcessing = false
-            return
-        }
-
-        var actualNewEncodings = 0
-        var actualCacheHits = 0
-        let total = Double(ids.count)
-
-        for (offset, id) in ids.enumerated() {
-            defer {
-                processingProgress = Double(offset + 1) / total
-            }
-
-            if let cached = cachedMap[id], let embedding = try? cached.getEmbedding() {
-                cached.lastAccessed = Date()
-                upsertInMemoryImage(sourceId: id, embedding: embedding)
-                actualCacheHits += 1
-                continue
-            }
-
-            guard
-                let item = itemsById[id],
-                let data = try? await item.loadTransferable(type: Data.self),
-                let uiImage = UIImage(data: data),
-                let pixelBuffer = uiImage.pixelBuffer(
-                    width: Int(model.targetImageSize.width),
-                    height: Int(model.targetImageSize.height)
-                )
-            else {
-                continue
-            }
-
-            do {
-                let embedding = try await model.encode(image: pixelBuffer)
-                upsertInMemoryImage(sourceId: id, embedding: embedding, preferredImage: uiImage)
-                actualNewEncodings += 1
-
-                if let cachedObject = CachedEmbedding.from(
-                    embedding: embedding,
-                    imageId: id,
-                    modelName: currentModelName
-                ) {
-                    context.insert(cachedObject)
-                }
-            } catch {
-                print("Error encoding image \(id): \(error)")
-            }
-        }
-
-        try? context.save()
-
-        let duration = Date().timeIntervalSince(startTime)
-        let count = ids.count
-        if count > 0 {
-            encodingStats = (total: duration, average: duration / Double(count))
-        }
-
-        newlyEncodedCount = actualNewEncodings
-        newlyLoadedFromCacheCount = actualCacheHits
-        hydrateFromCache(context: context)
-        hasPreparedIndexForCurrentModel = true
-        displayedImages = []
-        isProcessing = false
-    }
-
     func ensureIndexReady(context: ModelContext) async {
         guard !hasPreparedIndexForCurrentModel else { return }
         guard !isPreparingIndex else { return }
@@ -334,6 +227,7 @@ class GalleryManager: ObservableObject {
 
         guard !text.isEmpty else {
             displayedImages = []
+            trimImageCache(keeping: [])
             isSearching = false
             searchProgress = 0
             searchStatusText = "Searching photos..."
@@ -367,10 +261,17 @@ class GalleryManager: ObservableObject {
             }
 
             let textEmbedding = try await model.encode(text: inputBox)
+            guard let normalizedQueryEmbedding = normalizedEmbedding(from: textEmbedding) else {
+                displayedImages = []
+                searchProgress = 0
+                searchStatusText = "Search failed."
+                return
+            }
+
             searchProgress = 0.15
             searchStatusText = "Calculating similarities..."
             await scoreAllImages(
-                using: textEmbedding,
+                using: normalizedQueryEmbedding,
                 progressStart: 0.15,
                 progressSpan: 0.65
             )
@@ -436,7 +337,11 @@ class GalleryManager: ObservableObject {
             var cacheHitCount = 0
 
             for id in selectedAssetIds {
-                guard let cached = cacheMap[id], let embedding = try? cached.getEmbedding() else {
+                guard
+                    let cached = cacheMap[id],
+                    let vector = cached.getEmbeddingVector(),
+                    let normalizedVector = normalizedEmbedding(from: vector)
+                else {
                     continue
                 }
 
@@ -446,7 +351,7 @@ class GalleryManager: ObservableObject {
                     GalleryImage(
                         sourceId: id,
                         image: existingImagesById[id],
-                        embedding: embedding
+                        embedding: normalizedVector
                     )
                 )
             }
@@ -498,16 +403,19 @@ class GalleryManager: ObservableObject {
 
             do {
                 let embedding = try await model.encode(image: pixelBuffer)
-                upsertInMemoryImage(sourceId: id, embedding: embedding)
+                guard let normalizedVector = normalizedEmbedding(from: embedding) else {
+                    continue
+                }
+
+                upsertInMemoryImage(sourceId: id, embedding: normalizedVector)
                 encodedCount += 1
 
-                if let cachedObject = CachedEmbedding.from(
-                    embedding: embedding,
+                let cachedObject = CachedEmbedding.from(
+                    vector: normalizedVector,
                     imageId: id,
                     modelName: selectedModel.name
-                ) {
-                    context.insert(cachedObject)
-                }
+                )
+                context.insert(cachedObject)
             } catch {
                 print("Backfill failed for \(id): \(error)")
             }
@@ -518,7 +426,7 @@ class GalleryManager: ObservableObject {
     }
 
     private func scoreAllImages(
-        using textEmbedding: MLMultiArray,
+        using textEmbedding: [Float],
         progressStart: Double,
         progressSpan: Double
     ) async {
@@ -551,6 +459,7 @@ class GalleryManager: ObservableObject {
     ) async {
         if lastSearchText.isEmpty {
             displayedImages = []
+            trimImageCache(keeping: [])
             return
         }
 
@@ -586,6 +495,7 @@ class GalleryManager: ObservableObject {
         }
 
         displayedImages = resultImages.filter { $0.image != nil }
+        trimImageCache(keeping: Set(displayedImages.map(\.sourceId)))
     }
 
     private func fetchCachedEmbeddingsMap(
@@ -772,7 +682,7 @@ class GalleryManager: ObservableObject {
 
     private func upsertInMemoryImage(
         sourceId: String,
-        embedding: MLMultiArray,
+        embedding: [Float],
         preferredImage: UIImage? = nil
     ) {
         if let index = allImages.firstIndex(where: { $0.sourceId == sourceId }) {
@@ -806,38 +716,61 @@ class GalleryManager: ObservableObject {
         searchStatusText = "Searching photos..."
     }
 
-    private func cosineSimilarity(_ embedding1: MLMultiArray, _ embedding2: MLMultiArray) -> Float {
-        func toFloatArray(_ array: MLMultiArray) -> [Float] {
-            switch array.dataType {
-            case .float16:
-                return array.withUnsafeBufferPointer(ofType: Float16.self) { buffer in
-                    buffer.map { Float($0) }
-                }
-            case .float32:
-                return array.withUnsafeBufferPointer(ofType: Float.self) { Array($0) }
-            case .double:
-                return array.withUnsafeBufferPointer(ofType: Double.self) { buffer in
-                    buffer.map { Float($0) }
-                }
-            default:
-                return []
+    private func trimImageCache(keeping sourceIds: Set<String>) {
+        for index in allImages.indices where !sourceIds.contains(allImages[index].sourceId) {
+            allImages[index].image = nil
+        }
+    }
+
+    private func normalizedEmbedding(from multiArray: MLMultiArray) -> [Float]? {
+        let values: [Float]
+        switch multiArray.dataType {
+        case .float16:
+            values = multiArray.withUnsafeBufferPointer(ofType: Float16.self) { buffer in
+                buffer.map { Float($0) }
             }
+        case .float32:
+            values = multiArray.withUnsafeBufferPointer(ofType: Float.self) { Array($0) }
+        case .double:
+            values = multiArray.withUnsafeBufferPointer(ofType: Double.self) { buffer in
+                buffer.map { Float($0) }
+            }
+        default:
+            return nil
         }
 
-        let e1 = toFloatArray(embedding1)
-        let e2 = toFloatArray(embedding2)
-        guard e1.count == e2.count, !e1.isEmpty else {
+        return normalizedEmbedding(from: values)
+    }
+
+    private func normalizedEmbedding(from values: [Float]) -> [Float]? {
+        guard !values.isEmpty else {
+            return nil
+        }
+
+        var sumSquares: Float = 0
+        for value in values {
+            sumSquares += value * value
+        }
+
+        let magnitude = sqrt(sumSquares)
+        guard magnitude > 0 else {
+            return nil
+        }
+
+        let inverseMagnitude = 1 / magnitude
+        return values.map { $0 * inverseMagnitude }
+    }
+
+    private func cosineSimilarity(_ embedding1: [Float], _ embedding2: [Float]) -> Float {
+        guard embedding1.count == embedding2.count, !embedding1.isEmpty else {
             return 0
         }
 
-        let dotProduct: Float = zip(e1, e2).reduce(0) { $0 + $1.0 * $1.1 }
-        let mag1: Float = sqrt(e1.reduce(0) { $0 + $1 * $1 })
-        let mag2: Float = sqrt(e2.reduce(0) { $0 + $1 * $1 })
-        guard mag1 > 0, mag2 > 0 else {
-            return 0
+        var dotProduct: Float = 0
+        for index in 0..<embedding1.count {
+            dotProduct += embedding1[index] * embedding2[index]
         }
-
-        return dotProduct / (mag1 * mag2)
+        return dotProduct
     }
 }
 

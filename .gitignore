@@ -37,3 +37,12 @@ reference_files/
 
 # CoreML package weights (keep local, do not upload)
 RPhoto/Models/**/weights/*.bin
+
+# Retired models (not shipped in app)
+RPhoto/Models/SigLIP2_Text_INT8.mlpackage/
+RPhoto/Models/SigLIP2_Vision_INT8.mlpackage/
+RPhoto/Models/mobileclip_blt_image.mlpackage/
+RPhoto/Models/mobileclip_blt_text.mlpackage/
+
+# OpenCode skills (installed via uipro-cli)
+.opencode/skills/ui-ux-pro-max/

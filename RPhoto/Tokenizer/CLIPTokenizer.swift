@@ -49,7 +49,7 @@ extension String {
     }
 }
 
-class CLIPTokenizer {
+class CLIPTokenizer: TextTokenizer {
     let bpeRanks: [BytePair: Int]
     private let encoder: [String: Int]
     private let decoder: [Int: String]

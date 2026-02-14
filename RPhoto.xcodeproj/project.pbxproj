@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -21,9 +21,10 @@
 		6FA4045B4264933FAD54D376 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD95E7661D7CAC690D9D410 /* PhotoLibraryService.swift */; };
 		707F804241F0450F8D0FAF2B /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA585CE614C8ACBD37E89798 /* SwiftDataModels.swift */; };
 		7BD0BDD27A5681E045E77953 /* ImageDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15713FC47715CFA64076CA74 /* ImageDetailView.swift */; };
-		880BCADAACC6FB07A735F95B /* mobileclip_blt_text.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 4C3D1C89991234604E1AA9A4 /* mobileclip_blt_text.mlpackage */; };
 		8E58E8681DD431F2161FF529 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 81AD5EBC238CC2BDF59683D8 /* Assets.xcassets */; };
-		912440F602F9DA7CA92C5116 /* mobileclip_blt_image.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 5597979FE4A6AD655066444B /* mobileclip_blt_image.mlpackage */; };
+		A1B2C3D4E5F60718293A4B5C /* SigLIP2Tokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SigLIP2Tokenizer.swift */; };
+		A1B2C3D4E5F60718293A4B5E /* siglip2-vocab.json in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5F /* siglip2-vocab.json */; };
+		A1B2C3D4E5F60718293A4B60 /* siglip2-merges.txt in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B61 /* siglip2-merges.txt */; };
 		A25A67838ABF609569166A8A /* Translation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4255A055974D126046855A6 /* Translation.framework */; };
 		AC92730638D2DF77271021B6 /* SelectedAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF7897096B1D0F1B881D665 /* SelectedAsset.swift */; };
 		AE844EA4DF8A8432B7C9779B /* ImageNet_class_index.json in Resources */ = {isa = PBXBuildFile; fileRef = B630530C973B14FB75153BE9 /* ImageNet_class_index.json */; };
@@ -33,6 +34,8 @@
 		C09378A9F1A8646303D64459 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F7A7B03784FEDECFB44A8E21 /* CoreML.framework */; };
 		CCD0CD9D6BD243792BF47C5D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */; };
 		D21C706BD7AF48F11EAA5DAA /* GalleryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C241D7FDB335A41400C978D1 /* GalleryManager.swift */; };
+		D2C2D7932F3F6092001741F9 /* SigLIP2_Vision.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = D2C2D7922F3F6092001741F9 /* SigLIP2_Vision.mlpackage */; };
+		D2C2D7942F3F6092001741F9 /* SigLIP2_Text.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = D2C2D7912F3F6092001741F9 /* SigLIP2_Text.mlpackage */; };
 		DBB6E2883AF64597ED084BF1 /* AsyncFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA32F9CABB730A8D92DA28DA /* AsyncFactory.swift */; };
 		DF01496F230DA151129D12A1 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07338089F39EF6E490F6FC0 /* Utils.swift */; };
 		E275A005AECF4ECCBBAE6A86 /* GalleryNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86D047C48C2DF3414F4DF7D /* GalleryNotifications.swift */; };
@@ -45,18 +48,16 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0B0B8B229F7B2D5867266D99 /* RPhoto.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B0B8B229F7B2D5867266D99 /* RPhoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		15713FC47715CFA64076CA74 /* ImageDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDetailView.swift; sourceTree = "<group>"; };
 		1BCF91A16A2900418C40BDA2 /* GallerySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GallerySearchView.swift; sourceTree = "<group>"; };
 		1F7C430956D984B8B10E6E52 /* tinyclip-vocab.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tinyclip-vocab.json"; sourceTree = "<group>"; };
 		4A9B3169B5016EED186FD7E6 /* tinyclip-merges.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "tinyclip-merges.txt"; sourceTree = "<group>"; };
 		4AF7897096B1D0F1B881D665 /* SelectedAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedAsset.swift; sourceTree = "<group>"; };
-		4C1E7773A58B97F0616354C8 /* TinyCLIP_Text.mlpackage */ = {isa = PBXFileReference; path = TinyCLIP_Text.mlpackage; sourceTree = "<group>"; };
-		4C3D1C89991234604E1AA9A4 /* mobileclip_blt_text.mlpackage */ = {isa = PBXFileReference; path = mobileclip_blt_text.mlpackage; sourceTree = "<group>"; };
+		4C1E7773A58B97F0616354C8 /* TinyCLIP_Text.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = TinyCLIP_Text.mlpackage; sourceTree = "<group>"; };
 		52B4977BD905C2C673014F80 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		545836CC2AB84451A8509F3A /* mobileclip_s2_image.mlpackage */ = {isa = PBXFileReference; path = mobileclip_s2_image.mlpackage; sourceTree = "<group>"; };
-		5597979FE4A6AD655066444B /* mobileclip_blt_image.mlpackage */ = {isa = PBXFileReference; path = mobileclip_blt_image.mlpackage; sourceTree = "<group>"; };
-		55FC421B564C048F7E7F4FD0 /* mobileclip_s2_text.mlpackage */ = {isa = PBXFileReference; path = mobileclip_s2_text.mlpackage; sourceTree = "<group>"; };
+		545836CC2AB84451A8509F3A /* mobileclip_s2_image.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = mobileclip_s2_image.mlpackage; sourceTree = "<group>"; };
+		55FC421B564C048F7E7F4FD0 /* mobileclip_s2_text.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = mobileclip_s2_text.mlpackage; sourceTree = "<group>"; };
 		5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		6055DF159738DFDFDD2E1677 /* CacheDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheDebugView.swift; sourceTree = "<group>"; };
 		6B5D3DBF5A4BEEDBF5D37068 /* RPhotoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPhotoApp.swift; sourceTree = "<group>"; };
@@ -66,8 +67,11 @@
 		81AD5EBC238CC2BDF59683D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		82CDC9CBB17895B6E7B7CFDC /* CLIPTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPTokenizer.swift; sourceTree = "<group>"; };
 		8B575EF31CE0C9A7C7ABE3F5 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		9628250101E0958D0A3E0840 /* TinyCLIP_Vision.mlpackage */ = {isa = PBXFileReference; path = TinyCLIP_Vision.mlpackage; sourceTree = "<group>"; };
+		9628250101E0958D0A3E0840 /* TinyCLIP_Vision.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = TinyCLIP_Vision.mlpackage; sourceTree = "<group>"; };
 		9CC8E1473FE3431717952D4F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* SigLIP2Tokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigLIP2Tokenizer.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5F /* siglip2-vocab.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "siglip2-vocab.json"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B61 /* siglip2-merges.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "siglip2-merges.txt"; sourceTree = "<group>"; };
 		A297E1D46615EF3F54E2DE16 /* clip-merges.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "clip-merges.txt"; sourceTree = "<group>"; };
 		AA32F9CABB730A8D92DA28DA /* AsyncFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncFactory.swift; sourceTree = "<group>"; };
 		B07338089F39EF6E490F6FC0 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
@@ -76,6 +80,8 @@
 		C241D7FDB335A41400C978D1 /* GalleryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryManager.swift; sourceTree = "<group>"; };
 		C4AD3735BD3265D0DA622DAC /* bbox_hierarchy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = bbox_hierarchy.json; sourceTree = "<group>"; };
 		D1180F2407C096DBE4E6469D /* Build.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Build.xcconfig; sourceTree = "<group>"; };
+		D2C2D7912F3F6092001741F9 /* SigLIP2_Text.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = SigLIP2_Text.mlpackage; sourceTree = "<group>"; };
+		D2C2D7922F3F6092001741F9 /* SigLIP2_Vision.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = SigLIP2_Vision.mlpackage; sourceTree = "<group>"; };
 		D465F02A628D00D87C24D88E /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
 		D86D047C48C2DF3414F4DF7D /* GalleryNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNotifications.swift; sourceTree = "<group>"; };
 		DA2C7D1BCFDD7934E8E8F1D5 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
@@ -124,6 +130,7 @@
 			children = (
 				82CDC9CBB17895B6E7B7CFDC /* CLIPTokenizer.swift */,
 				6EA3FB5DF94FDC2792A8556B /* GPT2ByteEncoder.swift */,
+				A1B2C3D4E5F60718293A4B5D /* SigLIP2Tokenizer.swift */,
 				B07338089F39EF6E490F6FC0 /* Utils.swift */,
 			);
 			path = Tokenizer;
@@ -156,6 +163,8 @@
 				A297E1D46615EF3F54E2DE16 /* clip-merges.txt */,
 				7C3E6DA25A028C4D26D32214 /* clip-vocab.json */,
 				B630530C973B14FB75153BE9 /* ImageNet_class_index.json */,
+				A1B2C3D4E5F60718293A4B61 /* siglip2-merges.txt */,
+				A1B2C3D4E5F60718293A4B5F /* siglip2-vocab.json */,
 				4A9B3169B5016EED186FD7E6 /* tinyclip-merges.txt */,
 				1F7C430956D984B8B10E6E52 /* tinyclip-vocab.json */,
 			);
@@ -182,10 +191,10 @@
 		C62C79D3629A228F13CC6B29 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				D2C2D7912F3F6092001741F9 /* SigLIP2_Text.mlpackage */,
+				D2C2D7922F3F6092001741F9 /* SigLIP2_Vision.mlpackage */,
 				C241D7FDB335A41400C978D1 /* GalleryManager.swift */,
 				D86D047C48C2DF3414F4DF7D /* GalleryNotifications.swift */,
-				5597979FE4A6AD655066444B /* mobileclip_blt_image.mlpackage */,
-				4C3D1C89991234604E1AA9A4 /* mobileclip_blt_text.mlpackage */,
 				545836CC2AB84451A8509F3A /* mobileclip_s2_image.mlpackage */,
 				55FC421B564C048F7E7F4FD0 /* mobileclip_s2_text.mlpackage */,
 				7FD95E7661D7CAC690D9D410 /* PhotoLibraryService.swift */,
@@ -247,11 +256,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2611;
-				TargetAttributes = {
-					A459CF8B9D79F609AB06E1F6 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 50A018A3DDC8620F41A3B280 /* Build configuration list for PBXProject "RPhoto" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -263,7 +267,6 @@
 			);
 			mainGroup = A365C604F55D4109188DFFC3;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -286,6 +289,8 @@
 				3B424BD163BBE998F8D4090F /* clip-vocab.json in Resources */,
 				5E610FC8FE20344911419250 /* tinyclip-merges.txt in Resources */,
 				12EAB4E23D35B5138F2B3715 /* tinyclip-vocab.json in Resources */,
+				A1B2C3D4E5F60718293A4B5E /* siglip2-vocab.json in Resources */,
+				A1B2C3D4E5F60718293A4B60 /* siglip2-merges.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,10 +318,11 @@
 				03B27A1C50307CFC5AC54D5D /* TinyCLIP_Text.mlpackage in Sources */,
 				BFC9B09B667F72E3603CE342 /* TinyCLIP_Vision.mlpackage in Sources */,
 				DF01496F230DA151129D12A1 /* Utils.swift in Sources */,
-				912440F602F9DA7CA92C5116 /* mobileclip_blt_image.mlpackage in Sources */,
-				880BCADAACC6FB07A735F95B /* mobileclip_blt_text.mlpackage in Sources */,
 				B840D27653D1FD9223B3067A /* mobileclip_s2_image.mlpackage in Sources */,
 				FB2C815DC40445DC6461A4C5 /* mobileclip_s2_text.mlpackage in Sources */,
+				D2C2D7932F3F6092001741F9 /* SigLIP2_Vision.mlpackage in Sources */,
+				D2C2D7942F3F6092001741F9 /* SigLIP2_Text.mlpackage in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* SigLIP2Tokenizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,8 +390,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = U74D23UJBM;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RPhoto/Info.plist;
@@ -393,8 +399,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.RPhoto;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prokid.RPhoto;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -405,8 +411,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = U74D23UJBM;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RPhoto/Info.plist;
@@ -414,8 +420,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.RPhoto;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prokid.RPhoto;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

@@ -28,7 +28,6 @@ extension CachedEmbedding {
     func getEmbeddingVector() -> [Float]? {
         let stride = MemoryLayout<Float>.size
         guard embeddingData.count % stride == 0 else {
-            print("CachedEmbedding: Invalid embedding byte length \(embeddingData.count)")
             return nil
         }
 

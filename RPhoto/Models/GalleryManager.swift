@@ -55,17 +55,14 @@ class GalleryManager: ObservableObject {
 
     private var lastSearchText: String = ""
     private var model: CLIPEncoder
-    private var tokenizer: AsyncFactory<CLIPTokenizer>
+    private var tokenizer: AsyncFactory<any TextTokenizer>
     private let photoLibraryService = PhotoLibraryService()
     private var cacheResetObserver: NSObjectProtocol?
 
     init() {
         self.model = defaultModel.factory()
         self.tokenizer = AsyncFactory {
-            CLIPTokenizer(
-                vocabFileName: defaultModel.vocabName,
-                mergesFileName: defaultModel.mergesName
-            )
+            defaultModel.tokenizerFactory()
         }
         self.cacheResetObserver = NotificationCenter.default.addObserver(
             forName: .galleryDataDidReset,
@@ -78,7 +75,9 @@ class GalleryManager: ObservableObject {
         }
 
         Task {
-            await self.model.load()
+            async let m: Void = self.model.load()
+            async let t = self.tokenizer.get()
+            _ = await (m, t)
         }
     }
 
@@ -98,13 +97,15 @@ class GalleryManager: ObservableObject {
         selectedModel = config
         model = config.factory()
         tokenizer = AsyncFactory {
-            CLIPTokenizer(vocabFileName: config.vocabName, mergesFileName: config.mergesName)
+            config.tokenizerFactory()
         }
 
         resetInMemoryIndex()
         encodingStats = nil
 
-        await model.load()
+        async let m: Void = model.load()
+        async let t = tokenizer.get()
+        _ = await (m, t)
     }
 
     func bootstrapPhotoAccess(context: ModelContext) async {
@@ -217,9 +218,7 @@ class GalleryManager: ObservableObject {
 
             cleanupStaleAssets(ids: staleIds, context: context)
             try? context.save()
-        } catch {
-            print("Failed to cleanup stale assets: \(error)")
-        }
+        } catch { }
     }
 
     func search(text: String, context: ModelContext) async {
@@ -251,11 +250,13 @@ class GalleryManager: ObservableObject {
 
         do {
             searchStatusText = "Encoding query..."
-            let tokenIds = await tokenizer.get().encode_full(
+            let currentTokenizer = await tokenizer.get()
+            let tokenIds = currentTokenizer.encode_full(
                 text: text,
                 padTokenId: selectedModel.padTokenId
             )
-            let inputBox = try MLMultiArray(shape: [1, 77], dataType: .int32)
+            let seqLen = currentTokenizer.contextLength
+            let inputBox = try MLMultiArray(shape: [1, NSNumber(value: seqLen)], dataType: .int32)
             for (index, value) in tokenIds.enumerated() {
                 inputBox[index] = NSNumber(value: value)
             }
@@ -284,7 +285,6 @@ class GalleryManager: ObservableObject {
             searchProgress = 1
             searchStatusText = "Search completed."
         } catch {
-            print("Search failed: \(error)")
             searchProgress = 0
             searchStatusText = "Search failed."
         }
@@ -304,9 +304,7 @@ class GalleryManager: ObservableObject {
             }
 
             try? context.save()
-        } catch {
-            print("Legacy migration failed: \(error)")
-        }
+        } catch { }
     }
 
     private func hydrateFromCache(context: ModelContext) {
@@ -358,7 +356,6 @@ class GalleryManager: ObservableObject {
 
             newlyLoadedFromCacheCount = cacheHitCount
         } catch {
-            print("Hydrate from cache failed: \(error)")
             selectedAssetIds = []
             allImages = []
             newlyLoadedFromCacheCount = 0
@@ -416,9 +413,7 @@ class GalleryManager: ObservableObject {
                     modelName: selectedModel.name
                 )
                 context.insert(cachedObject)
-            } catch {
-                print("Backfill failed for \(id): \(error)")
-            }
+            } catch { }
         }
 
         try? context.save()
@@ -530,7 +525,6 @@ class GalleryManager: ObservableObject {
             let cachedCount = try context.fetchCount(FetchDescriptor<CachedEmbedding>())
             return cachedCount > 0
         } catch {
-            print("Failed to inspect persisted gallery data: \(error)")
             return false
         }
     }
@@ -591,9 +585,7 @@ class GalleryManager: ObservableObject {
 
             _ = try persistSelectedAssets(ids: sortedAccessibleIds, context: context)
             removeSelectedAssets(ids: removedIds, context: context, removeCache: status == .authorized)
-        } catch {
-            print("Failed to sync selected assets: \(error)")
-        }
+        } catch { }
 
         selectedAssetIds = sortedAccessibleIds
         processingStatusText = "Loading cached embeddings..."
@@ -675,9 +667,7 @@ class GalleryManager: ObservableObject {
             selectedAssetIds.removeAll { idSet.contains($0) }
 
             try context.save()
-        } catch {
-            print("Failed to remove selected assets: \(error)")
-        }
+        } catch { }
     }
 
     private func upsertInMemoryImage(

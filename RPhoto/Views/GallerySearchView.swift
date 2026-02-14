@@ -8,14 +8,12 @@ import PhotosUI
 import Photos
 import SwiftData
 import Translation
-import NaturalLanguage
-import UIKit
 
 private struct TranslationSearchRequest: Equatable {
     let id: UUID
     let rawText: String
-    let detectedLanguage: Locale.Language?
-    let detectedLanguageCode: String?
+    let sourceLanguage: Locale.Language
+    let sourceLanguageCode: String
 }
 
 private enum TranslationDecision: String, Equatable {
@@ -27,13 +25,13 @@ private enum TranslationDecision: String, Equatable {
     var displayLabel: String {
         switch self {
         case .passthroughEnglish:
-            return "passthroughEnglish"
+            return "English (no translation needed)"
         case .translatedToEnglish:
-            return "translatedToEnglish"
+            return "Translated to English"
         case .blockedNeedsLanguagePack:
-            return "blockedNeedsLanguagePack"
+            return "Language pack not installed"
         case .blockedUnsupported:
-            return "blockedUnsupported"
+            return "Language not supported"
         }
     }
 
@@ -50,9 +48,15 @@ private enum TranslationDecision: String, Equatable {
 private struct TranslationDiagnostics: Equatable {
     let rawText: String
     let effectiveEnglishText: String?
-    let detectedLanguageCode: String?
+    let sourceLanguageCode: String
     let decision: TranslationDecision
     let statusMessage: String
+}
+
+private struct InputLanguageOption: Identifiable, Equatable {
+    let id: String
+    let language: Locale.Language
+    let displayName: String
 }
 
 struct GallerySearchView: View {
@@ -62,6 +66,7 @@ struct GallerySearchView: View {
     @State private var searchText = ""
     @State private var showDebugView = false
     @State private var waitingPermissionRefresh = false
+    @AppStorage("search_input_language_identifier") private var selectedInputLanguageIdentifier = "en"
 
     @State private var translationConfiguration: TranslationSession.Configuration?
     @State private var pendingTranslationRequest: TranslationSearchRequest?
@@ -70,6 +75,11 @@ struct GallerySearchView: View {
     @State private var translationDiagnostics: TranslationDiagnostics?
     @State private var isTranslating = false
     @State private var translationStatusText = ""
+    @State private var supportedInputLanguages: [InputLanguageOption] = [
+        InputLanguageOption(id: "en", language: Locale.Language(identifier: "en"), displayName: "English")
+    ]
+    @State private var isLoadingSupportedLanguages = false
+    @State private var selectedInputLanguageDisplayName = "English"
 
     @Query private var selectedAssets: [SelectedAsset]
 
@@ -111,6 +121,36 @@ struct GallerySearchView: View {
                             submitSearchPipeline()
                         }
                         .submitLabel(.search)
+
+                    #if !targetEnvironment(macCatalyst)
+                    if !ProcessInfo.processInfo.isiOSAppOnMac {
+                        Menu {
+                            if isLoadingSupportedLanguages {
+                                Text("Loading languages...")
+                            }
+
+                            Picker("Input Language", selection: $selectedInputLanguageIdentifier) {
+                                ForEach(supportedInputLanguages) { languageOption in
+                                    Text(languageOption.displayName).tag(languageOption.id)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(selectedInputLanguageShortCode)
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        .accessibilityLabel("Input language")
+                        .accessibilityValue(selectedInputLanguageDisplayName)
+                    }
+                    #endif
 
                     if !searchText.isEmpty {
                         Button(action: {
@@ -240,7 +280,7 @@ struct GallerySearchView: View {
                     } label: {
                         VStack(spacing: 0) {
                             HStack(spacing: 4) {
-                                Text("MobileCLIP Search")
+                                Text("Semantic Search")
                                     .font(.headline)
                                     .foregroundStyle(.primary)
                                 Image(systemName: "chevron.down")
@@ -297,6 +337,12 @@ struct GallerySearchView: View {
                     await rerunWithEffectiveQuery()
                 }
             }
+            .onChange(of: selectedInputLanguageIdentifier) { _, _ in
+                selectedInputLanguageDisplayName = resolvedSelectedInputLanguageDisplayName()
+                if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    submitSearchPipeline()
+                }
+            }
             .onChange(of: scenePhase) { _, newValue in
                 guard newValue == .active, waitingPermissionRefresh else {
                     return
@@ -304,11 +350,13 @@ struct GallerySearchView: View {
                 waitingPermissionRefresh = false
                 Task {
                     await manager.refreshAfterPermissionPotentiallyChanged(context: modelContext)
+                    await loadSupportedInputLanguages()
                     await rerunWithEffectiveQuery()
                 }
             }
             .task {
                 await manager.bootstrapPhotoAccess(context: modelContext)
+                await loadSupportedInputLanguages()
             }
             .translationTask(translationConfiguration) { session in
                 await handleTranslation(using: session)
@@ -318,100 +366,45 @@ struct GallerySearchView: View {
 }
 
 private extension GallerySearchView {
+    var isRunningOnMac: Bool {
+        ProcessInfo.processInfo.isiOSAppOnMac
+    }
+
     var shouldShowTranslationPanel: Bool {
-        isTranslating || translationDiagnostics != nil
+        guard !isRunningOnMac else { return false }
+        if isTranslating { return true }
+        guard let diagnostics = translationDiagnostics else { return false }
+        return diagnostics.decision.isBlocked
     }
 
-    var translationStageLabel: String {
-        if isTranslating {
-            return translationStatusText
-        }
-
-        guard let diagnostics = translationDiagnostics else {
-            return "Idle"
-        }
-
-        if diagnostics.decision.isBlocked {
-            return "Blocked"
-        }
-
-        return "Ready"
-    }
-
-    var translationStageIcon: String {
-        if isTranslating {
-            return "globe.badge.chevron.backward"
-        }
-
-        guard let diagnostics = translationDiagnostics else {
-            return "globe"
-        }
-
-        return diagnostics.decision.isBlocked ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
-    }
-
-    var translationStageColor: Color {
-        if isTranslating {
-            return .secondary
-        }
-
-        guard let diagnostics = translationDiagnostics else {
-            return .secondary
-        }
-
-        return diagnostics.decision.isBlocked ? .red : .green
+    var selectedInputLanguageShortCode: String {
+        selectedInputLanguageIdentifier
+            .split(separator: "-")
+            .first
+            .map { String($0).uppercased() } ?? "EN"
     }
 
     var translationDiagnosticsPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Image(systemName: translationStageIcon)
-                    .foregroundStyle(translationStageColor)
-                Text("Multilingual Query Pipeline")
+                Image(systemName: isTranslating ? "globe.badge.chevron.backward" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(isTranslating ? Color.secondary : Color.red)
+                Text("Translation")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                Text(translationStageLabel)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(translationStageColor)
             }
 
             if isTranslating {
-                if let pendingTranslationRequest {
-                    Text("Input: \(pendingTranslationRequest.rawText)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
                 Text(translationStatusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if let diagnostics = translationDiagnostics {
-                Text("Decision: \(diagnostics.decision.displayLabel)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("Input: \(diagnostics.rawText)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let detectedLanguageCode = diagnostics.detectedLanguageCode {
-                    Text("Detected language: \(detectedLanguageCode)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let effectiveEnglishText = diagnostics.effectiveEnglishText {
-                    Text("English query: \(effectiveEnglishText)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
                 Text(diagnostics.statusMessage)
                     .font(.caption)
-                    .foregroundStyle(diagnostics.decision.isBlocked ? .red : .secondary)
+                    .foregroundStyle(.red)
             }
         }
         .padding(10)
@@ -455,20 +448,24 @@ private extension GallerySearchView {
             return
         }
 
-        let detectedLanguage = detectLanguage(for: normalizedText)
-        let detectedLanguageCode = detectedLanguage?.languageCode?.identifier
-        let hasEnglishDictionarySignal = isLikelyEnglishDictionaryQuery(normalizedText)
-        let isEnglishInput =
-            detectedLanguageCode == "en" ||
-            hasEnglishDictionarySignal ||
-            (detectedLanguage == nil && isLikelyEnglishText(normalizedText))
-
-        if isEnglishInput {
-            let effectiveLanguageCode = detectedLanguageCode ?? "en"
+        // On Mac, Translation framework is unavailable — always search directly
+        if isRunningOnMac {
             runPassthroughSearch(
                 rawText: normalizedText,
-                detectedLanguageCode: effectiveLanguageCode,
-                statusMessage: "Input appears to be English. Search ran without translation."
+                sourceLanguageCode: "en",
+                statusMessage: "Searching in English."
+            )
+            return
+        }
+
+        let selectedSourceLanguage = resolvedSelectedInputLanguage()
+        let selectedSourceLanguageCode = inputLanguageIdentifier(for: selectedSourceLanguage)
+
+        if isEnglish(language: selectedSourceLanguage) {
+            runPassthroughSearch(
+                rawText: normalizedText,
+                sourceLanguageCode: selectedSourceLanguageCode,
+                statusMessage: "Searching in English."
             )
             return
         }
@@ -476,29 +473,23 @@ private extension GallerySearchView {
         let request = TranslationSearchRequest(
             id: UUID(),
             rawText: normalizedText,
-            detectedLanguage: detectedLanguage,
-            detectedLanguageCode: detectedLanguageCode
+            sourceLanguage: selectedSourceLanguage,
+            sourceLanguageCode: selectedSourceLanguageCode
         )
         pendingTranslationRequest = request
         activeRequestId = request.id
         effectiveSearchText = ""
         translationDiagnostics = nil
         isTranslating = true
-        translationStatusText = "Checking language"
+            translationStatusText = "Checking language availability..."
 
         let targetEnglish = Locale.Language(identifier: "en")
-        if translationConfiguration == nil {
-            translationConfiguration = TranslationSession.Configuration(
-                source: request.detectedLanguage,
-                target: targetEnglish
-            )
-        } else {
-            var config = translationConfiguration!
-            config.source = request.detectedLanguage
-            config.target = targetEnglish
-            config.invalidate()
-            translationConfiguration = config
-        }
+        var config = TranslationSession.Configuration(
+            source: request.sourceLanguage,
+            target: targetEnglish
+        )
+        config.invalidate()
+        translationConfiguration = config
     }
 
     func clearSearchPipeline() {
@@ -536,179 +527,91 @@ private extension GallerySearchView {
         let rawText = request.rawText
         let targetEnglish = Locale.Language(identifier: "en")
         let availability = LanguageAvailability()
-        let detectedLanguage = request.detectedLanguage
-        let detectedLanguageCode = request.detectedLanguageCode
+        let sourceLanguage = request.sourceLanguage
+        let sourceLanguageCode = request.sourceLanguageCode
 
         do {
-            translationStatusText = "Checking language"
-            if let detectedLanguage {
-                let statusToEnglish = await availability.status(from: detectedLanguage, to: targetEnglish)
+        translationStatusText = "Checking language availability..."
+            let statusToEnglish = await availability.status(from: sourceLanguage, to: targetEnglish)
+            guard isRequestActive(requestId) else {
+                return
+            }
+
+            switch statusToEnglish {
+            case .installed:
+                translationStatusText = "Translating..."
+                let response = try await session.translate(rawText)
                 guard isRequestActive(requestId) else {
                     return
                 }
 
-                switch statusToEnglish {
-                case .installed:
-                    translationStatusText = "Translating"
-                    let response = try await session.translate(rawText)
-                    guard isRequestActive(requestId) else {
-                        return
-                    }
-
-                    let translatedText = response.targetText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !translatedText.isEmpty else {
-                        await blockTranslation(
-                            requestId: requestId,
-                            rawText: rawText,
-                            decision: .blockedUnsupported,
-                            detectedLanguageCode: detectedLanguageCode,
-                            statusMessage: "Translation returned an empty result. Open Apple's Translate app to verify language packs, then try again."
-                        )
-                        return
-                    }
-
-                    await completeTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        effectiveEnglishText: translatedText,
-                        detectedLanguageCode: response.sourceLanguage.languageCode?.identifier ?? detectedLanguageCode,
-                        decision: .translatedToEnglish,
-                        statusMessage: "Translated to English and executed semantic search."
-                    )
-
-                case .supported:
-                    await blockTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        decision: .blockedNeedsLanguagePack,
-                        detectedLanguageCode: detectedLanguageCode,
-                        statusMessage: "Translation resources are not installed for this language pair. Open Apple's Translate app and download the required language pack, then try again."
-                    )
-
-                case .unsupported:
+                let translatedText = response.targetText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !translatedText.isEmpty else {
                     await blockTranslation(
                         requestId: requestId,
                         rawText: rawText,
                         decision: .blockedUnsupported,
-                        detectedLanguageCode: detectedLanguageCode,
-                        statusMessage: "The detected language is not supported for translation to English. Open Apple's Translate app to verify available language packs."
+                        sourceLanguageCode: sourceLanguageCode,
+                        statusMessage: "Translation returned empty. Please check your language packs in the Translate app."
                     )
-                @unknown default:
-                    await blockTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        decision: .blockedUnsupported,
-                        detectedLanguageCode: detectedLanguageCode,
-                        statusMessage: "Language availability returned an unknown status. Open Apple's Translate app to verify language packs, then try again."
-                    )
-                }
-            } else {
-                let statusToEnglish = try await availability.status(for: rawText, to: targetEnglish)
-                guard isRequestActive(requestId) else {
                     return
                 }
 
-                switch statusToEnglish {
-                case .installed:
-                    translationStatusText = "Translating"
-                    let response = try await session.translate(rawText)
-                    guard isRequestActive(requestId) else {
-                        return
-                    }
+                await completeTranslation(
+                    requestId: requestId,
+                    rawText: rawText,
+                    effectiveEnglishText: translatedText,
+                    sourceLanguageCode: inputLanguageIdentifier(for: response.sourceLanguage),
+                    decision: .translatedToEnglish,
+                    statusMessage: "Translated and searching."
+                )
 
-                    let translatedText = response.targetText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !translatedText.isEmpty else {
-                        await blockTranslation(
-                            requestId: requestId,
-                            rawText: rawText,
-                            decision: .blockedUnsupported,
-                            detectedLanguageCode: nil,
-                            statusMessage: "Translation returned an empty result. Open Apple's Translate app to verify language packs, then try again."
-                        )
-                        return
-                    }
+            case .supported:
+                let langName = displayName(for: sourceLanguageCode)
+                await blockTranslation(
+                    requestId: requestId,
+                    rawText: rawText,
+                    decision: .blockedNeedsLanguagePack,
+                    sourceLanguageCode: sourceLanguageCode,
+                    statusMessage: "Please install the \"\(langName) → English\" language pack in the Translate app, then try again."
+                )
 
-                    await completeTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        effectiveEnglishText: translatedText,
-                        detectedLanguageCode: response.sourceLanguage.languageCode?.identifier,
-                        decision: .translatedToEnglish,
-                        statusMessage: "Translated to English and executed semantic search."
-                    )
-
-                case .supported:
-                    await blockTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        decision: .blockedNeedsLanguagePack,
-                        detectedLanguageCode: nil,
-                        statusMessage: "Translation resources are not installed for this language pair. Open Apple's Translate app and download the required language pack, then try again."
-                    )
-
-                case .unsupported:
-                    let statusToAny = try await availability.status(for: rawText, to: nil)
-                    guard isRequestActive(requestId) else {
-                        return
-                    }
-
-                    if statusToAny == .installed || statusToAny == .supported {
-                        await completeTranslation(
-                            requestId: requestId,
-                            rawText: rawText,
-                            effectiveEnglishText: rawText,
-                            detectedLanguageCode: "en",
-                            decision: .passthroughEnglish,
-                            statusMessage: "Input appears to be English. Search ran without translation."
-                        )
-                    } else {
-                        await blockTranslation(
-                            requestId: requestId,
-                            rawText: rawText,
-                            decision: .blockedUnsupported,
-                            detectedLanguageCode: nil,
-                            statusMessage: "Unable to identify a supported source language for English translation. Open Apple's Translate app to verify language packs, then try again."
-                        )
-                    }
-                @unknown default:
-                    await blockTranslation(
-                        requestId: requestId,
-                        rawText: rawText,
-                        decision: .blockedUnsupported,
-                        detectedLanguageCode: nil,
-                        statusMessage: "Language availability returned an unknown status. Open Apple's Translate app to verify language packs, then try again."
-                    )
-                }
+            case .unsupported:
+                await blockTranslation(
+                    requestId: requestId,
+                    rawText: rawText,
+                    decision: .blockedUnsupported,
+                    sourceLanguageCode: sourceLanguageCode,
+                    statusMessage: "This language is not supported for translation."
+                )
+            @unknown default:
+                await blockTranslation(
+                    requestId: requestId,
+                    rawText: rawText,
+                    decision: .blockedUnsupported,
+                    sourceLanguageCode: sourceLanguageCode,
+                    statusMessage: "Unable to check language availability. Please verify language packs in the Translate app."
+                )
             }
         } catch {
             guard isRequestActive(requestId) else {
                 return
             }
 
-            if TranslationError.unableToIdentifyLanguage ~= error, isLikelyEnglishText(rawText) {
-                await completeTranslation(
-                    requestId: requestId,
-                    rawText: rawText,
-                    effectiveEnglishText: rawText,
-                    detectedLanguageCode: "en",
-                    decision: .passthroughEnglish,
-                    statusMessage: "Input appears to be English. Search ran without translation."
-                )
-                return
-            }
-
             let statusMessage: String
-            if TranslationError.unableToIdentifyLanguage ~= error {
-                statusMessage = "Could not identify the query language. Open Apple's Translate app to verify/download language packs, then try again."
+            if TranslationError.unsupportedSourceLanguage ~= error ||
+                TranslationError.unsupportedTargetLanguage ~= error ||
+                TranslationError.unsupportedLanguagePairing ~= error {
+                statusMessage = "This language cannot be translated on this device. Check language packs in the Translate app."
             } else {
-                statusMessage = "Translation failed. Open Apple's Translate app to verify/download language packs, then try again."
+                statusMessage = "Translation failed. Check language packs in the Translate app and try again."
             }
 
             await blockTranslation(
                 requestId: requestId,
                 rawText: rawText,
                 decision: .blockedUnsupported,
-                detectedLanguageCode: nil,
+                sourceLanguageCode: sourceLanguageCode,
                 statusMessage: statusMessage
             )
         }
@@ -718,7 +621,7 @@ private extension GallerySearchView {
         requestId: UUID,
         rawText: String,
         effectiveEnglishText: String,
-        detectedLanguageCode: String?,
+        sourceLanguageCode: String,
         decision: TranslationDecision,
         statusMessage: String
     ) async {
@@ -732,7 +635,7 @@ private extension GallerySearchView {
         translationDiagnostics = TranslationDiagnostics(
             rawText: rawText,
             effectiveEnglishText: effectiveEnglishText,
-            detectedLanguageCode: detectedLanguageCode,
+            sourceLanguageCode: sourceLanguageCode,
             decision: decision,
             statusMessage: statusMessage
         )
@@ -746,7 +649,7 @@ private extension GallerySearchView {
         requestId: UUID,
         rawText: String,
         decision: TranslationDecision,
-        detectedLanguageCode: String?,
+        sourceLanguageCode: String,
         statusMessage: String
     ) async {
         guard isRequestActive(requestId) else {
@@ -759,7 +662,7 @@ private extension GallerySearchView {
         translationDiagnostics = TranslationDiagnostics(
             rawText: rawText,
             effectiveEnglishText: nil,
-            detectedLanguageCode: detectedLanguageCode,
+            sourceLanguageCode: sourceLanguageCode,
             decision: decision,
             statusMessage: statusMessage
         )
@@ -773,7 +676,7 @@ private extension GallerySearchView {
         activeRequestId == requestId
     }
 
-    func runPassthroughSearch(rawText: String, detectedLanguageCode: String?, statusMessage: String) {
+    func runPassthroughSearch(rawText: String, sourceLanguageCode: String, statusMessage: String) {
         activeRequestId = nil
         pendingTranslationRequest = nil
         translationConfiguration = nil
@@ -784,7 +687,7 @@ private extension GallerySearchView {
         translationDiagnostics = TranslationDiagnostics(
             rawText: rawText,
             effectiveEnglishText: rawText,
-            detectedLanguageCode: detectedLanguageCode,
+            sourceLanguageCode: sourceLanguageCode,
             decision: .passthroughEnglish,
             statusMessage: statusMessage
         )
@@ -794,63 +697,142 @@ private extension GallerySearchView {
         }
     }
 
-    func detectLanguage(for text: String) -> Locale.Language? {
-        let recognizer = NLLanguageRecognizer()
-        recognizer.processString(text)
+    func loadSupportedInputLanguages() async {
+        guard !isRunningOnMac else { return }
 
-        guard let language = recognizer.dominantLanguage else {
-            return nil
+        isLoadingSupportedLanguages = true
+        defer {
+            isLoadingSupportedLanguages = false
         }
 
-        return Locale.Language(identifier: language.rawValue)
-    }
+        let availability = LanguageAvailability()
+        var supported = await availability.supportedLanguages
+        supported.append(Locale.Language(identifier: "en"))
 
-    func isLikelyEnglishText(_ text: String) -> Bool {
-        let hasLatinLetters = text.range(of: "[A-Za-z]", options: .regularExpression) != nil
-        let asciiLikePattern = "^[A-Za-z0-9\\s\\p{P}]+$"
-        let isAsciiLike = text.range(of: asciiLikePattern, options: .regularExpression) != nil
-        return hasLatinLetters && isAsciiLike
-    }
-
-    func isLikelyEnglishDictionaryQuery(_ text: String) -> Bool {
-        let letterOnlyTokens = text
-            .split { !$0.isLetter }
-            .map(String.init)
-            .filter { token in
-                token.count >= 2 && token.unicodeScalars.allSatisfy { $0.isASCII }
+        var dedupedByIdentifier: [String: Locale.Language] = [:]
+        for language in supported {
+            let identifier = inputLanguageIdentifier(for: language)
+            // Collapse all English variants (en-US, en-GB, en-AU, ...) into plain "en"
+            let key = isEnglish(language: language) ? "en" : identifier
+            if dedupedByIdentifier[key] == nil {
+                dedupedByIdentifier[key] = isEnglish(language: language)
+                    ? Locale.Language(identifier: "en")
+                    : language
             }
-
-        guard !letterOnlyTokens.isEmpty else {
-            return false
         }
 
-        let checker = UITextChecker()
-        let maxCheckedWords = 8
-        var checkedCount = 0
-        var validEnglishCount = 0
-
-        for token in letterOnlyTokens.prefix(maxCheckedWords) {
-            checkedCount += 1
-            let range = NSRange(location: 0, length: token.utf16.count)
-            let misspelledRange = checker.rangeOfMisspelledWord(
-                in: token,
-                range: range,
-                startingAt: 0,
-                wrap: false,
-                language: "en_US"
+        var dedupedByDisplayName: [String: InputLanguageOption] = [:]
+        for (identifier, language) in dedupedByIdentifier {
+            let option = InputLanguageOption(
+                id: identifier,
+                language: language,
+                displayName: displayName(for: identifier)
             )
+            let normalizedName = normalizedLanguageDisplayName(option.displayName)
 
-            if misspelledRange.location == NSNotFound {
-                validEnglishCount += 1
+            if let existingOption = dedupedByDisplayName[normalizedName] {
+                dedupedByDisplayName[normalizedName] = preferredLanguageOption(
+                    existing: existingOption,
+                    candidate: option,
+                    selectedIdentifier: selectedInputLanguageIdentifier
+                )
+            } else {
+                dedupedByDisplayName[normalizedName] = option
             }
         }
 
-        guard checkedCount > 0 else {
-            return false
+        supportedInputLanguages = dedupedByDisplayName
+            .values
+            .sorted { lhs, rhs in
+                lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+
+        if !isSupportedInputLanguageIdentifier(selectedInputLanguageIdentifier) {
+            selectedInputLanguageIdentifier = supportedInputLanguages.first(where: { $0.id == "en" })?.id
+                ?? supportedInputLanguages.first?.id
+                ?? "en"
         }
 
-        let validRatio = Double(validEnglishCount) / Double(checkedCount)
-        return validRatio >= 0.6
+        selectedInputLanguageDisplayName = resolvedSelectedInputLanguageDisplayName()
+    }
+
+    func isSupportedInputLanguageIdentifier(_ identifier: String) -> Bool {
+        supportedInputLanguages.contains { languageOption in
+            languageOption.id == identifier
+        }
+    }
+
+    func resolvedSelectedInputLanguage() -> Locale.Language {
+        if let matchedLanguage = supportedInputLanguages.first(where: { $0.id == selectedInputLanguageIdentifier }) {
+            return matchedLanguage.language
+        }
+
+        return Locale.Language(identifier: selectedInputLanguageIdentifier)
+    }
+
+    func inputLanguageIdentifier(for language: Locale.Language) -> String {
+        guard let languageCode = language.languageCode?.identifier else {
+            return language.minimalIdentifier
+        }
+
+        var parts: [String] = [languageCode]
+        if let script = language.script?.identifier, script != "Latn" {
+            parts.append(script)
+        }
+        if let region = language.region?.identifier {
+            parts.append(region)
+        }
+
+        return parts.joined(separator: "-")
+    }
+
+    func displayName(for identifier: String) -> String {
+        if let localized = Locale.current.localizedString(forIdentifier: identifier) {
+            return localized
+        }
+
+        let languageCode = identifier.split(separator: "-").first.map(String.init)
+        if let languageCode, let localizedLanguage = Locale.current.localizedString(forLanguageCode: languageCode) {
+            return localizedLanguage
+        }
+
+        return identifier
+    }
+
+    func resolvedSelectedInputLanguageDisplayName() -> String {
+        if let selectedOption = supportedInputLanguages.first(where: { $0.id == selectedInputLanguageIdentifier }) {
+            return selectedOption.displayName
+        }
+
+        return displayName(for: selectedInputLanguageIdentifier)
+    }
+
+    func normalizedLanguageDisplayName(_ displayName: String) -> String {
+        displayName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+    }
+
+    func preferredLanguageOption(existing: InputLanguageOption, candidate: InputLanguageOption, selectedIdentifier: String) -> InputLanguageOption {
+        if existing.id == selectedIdentifier {
+            return existing
+        }
+        if candidate.id == selectedIdentifier {
+            return candidate
+        }
+        if candidate.id.count < existing.id.count {
+            return candidate
+        }
+        if candidate.id.count == existing.id.count,
+           candidate.id.localizedCaseInsensitiveCompare(existing.id) == .orderedAscending {
+            return candidate
+        }
+
+        return existing
+    }
+
+    func isEnglish(language: Locale.Language) -> Bool {
+        language.languageCode?.identifier == "en"
     }
 
     func syncAccessiblePhotos() {

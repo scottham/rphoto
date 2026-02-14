@@ -116,9 +116,7 @@ struct CacheDebugView: View {
                 try modelContext.delete(model: SelectedAsset.self)
                 NotificationCenter.default.post(name: .galleryDataDidReset, object: nil)
             }
-        } catch {
-            print("Failed to clear cache: \(error)")
-        }
+        } catch { }
     }
 }
 

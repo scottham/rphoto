@@ -1,64 +1,59 @@
 # RPhoto
 
-RPhoto is an iOS app for semantic photo search using CLIP-family models (MobileCLIP + TinyCLIP).
-Indexing, embedding generation, and similarity retrieval run on-device.
+RPhoto is an iOS app for semantic photo search using CLIP-family models.
+Indexing, embedding generation, and similarity retrieval run entirely on-device via CoreML.
 
 ## Features
 
 - Natural-language search over your photo library.
-- Manual input-language selection with translation-to-English preprocessing before CLIP search.
-- Persistent local embedding cache for faster repeat search.
+- Multilingual query support — select an input language and the app translates to English before search. The translation panel only appears when a language pack needs to be installed.
+- Persistent local embedding cache (SwiftData) for fast repeat searches.
 - Switchable model backends:
-  - `MobileCLIP-S2`
-  - `MobileCLIP-BLT`
-  - `TinyCLIP`
-- Top-K retrieval control (5/10/20/50/100).
+  - **MobileCLIP-S2** — compact, fast; good default.
+  - **SigLIP2** (FP16) — Google's SigLIP2-base-patch16-224, higher capacity with 768-dim embeddings and 256K Gemma/SentencePiece vocabulary.
+  - **TinyCLIP** — smallest footprint.
+- Top-K retrieval control (5 / 10 / 20 / 50 / 100).
+- Cache inspector view for checking per-model embedding counts and clearing data.
 
 ## Retrieval Pipeline
 
 1. Sync currently accessible `PHAsset` image IDs.
 2. Restore cached embeddings from SwiftData.
-3. Backfill missing image embeddings with CoreML image encoder.
-4. For iOS 18+, use the user-selected input language (default English), then translate to English using Apple's Translation engine when needed.
-5. Encode final English query text with CLIP tokenizer + CoreML text encoder.
+3. Backfill missing image embeddings with the selected CoreML vision encoder.
+4. If the user-selected input language is not English, translate the query to English using Apple's Translation framework (iOS 18+). If the required language pack is not installed, search is blocked with guidance on which pack to download.
+5. Encode the final English query with the corresponding tokenizer (OpenAI BPE for MobileCLIP/TinyCLIP, SentencePiece BPE for SigLIP2) and CoreML text encoder.
 6. Compute cosine similarity against indexed image embeddings.
 7. Sort and display Top-K results.
 
-## Recent Stability and Performance Improvements
+## Model Details
 
-- Fixed long-query crash risk by clipping token count to CLIP context length.
-- Reduced search CPU cost:
-  - normalize embeddings once at load/encode time
-  - use dot-product on normalized vectors for scoring
-- Reduced runtime memory:
-  - keep only currently displayed result thumbnails in memory
-  - clear thumbnail cache when query is cleared
-- Removed an unused photo-loading code path in `GalleryManager`.
-- Added multilingual search pipeline with detailed translation diagnostics in UI.
+| Model | Image Size | Embedding Dim | Context Length | Precision | Weights |
+|-------|-----------|---------------|----------------|-----------|---------|
+| MobileCLIP-S2 | 256×256 | 512 | 77 | FP16 | ~189 MB |
+| SigLIP2 | 224×224 | 768 | 64 | FP16 | ~715 MB |
+| TinyCLIP | 224×224 | 512 | 77 | FP16 | ~220 MB |
+
+SigLIP2 notes:
+- Input text is lowercased before tokenization (Gemma tokenizer requirement).
+- `attention_mask` is never passed to the text encoder — SigLIP2 defaults to all-ones internally.
+- Pad token ID is 0; EOS token ID is 1.
 
 ## Quick Start
 
-1. Install tooling:
-   ```bash
-   brew install xcodegen
-   ```
-2. Place CoreML `.mlpackage` model folders under `RPhoto/Models/`.
-3. Generate project:
-   ```bash
-   xcodegen generate
-   ```
-4. Open `RPhoto.xcodeproj` and run on iOS 18+.
+1. Clone the repository.
+2. Place CoreML `.mlpackage` weight files under `RPhoto/Models/`. The model structure files (`model.mlmodel`, `Manifest.json`) are tracked in git; only the large `weight.bin` files need to be added locally.
+3. Open `RPhoto.xcodeproj` and build for iOS 18+ (or Mac — Designed for iPad).
 
 ## Notes
 
-- iOS 18+ required.
-- Model weight binaries are intentionally not tracked (`RPhoto/Models/**/weights/*.bin` is gitignored).
-- First launch requires photo permission. Use `Sync Accessible Photos` after permission changes.
-- Search inference is local. Depending on library state, Photos may fetch iCloud originals; metadata reverse geocoding may also require network.
-- Query input language is user-selectable in the search bar and persisted across app launches.
-- If translation resources are missing for the selected source language to English, search is blocked and the app prompts users to download language packs in Apple's Translate app.
+- iOS 18+ required (Translation framework dependency).
+- Model weight binaries are gitignored (`RPhoto/Models/**/weights/*.bin`).
+- First launch requires photo library permission. Use **Sync Accessible Photos** after permission changes.
+- On Mac (Designed for iPad), the Translation framework is bypassed — queries are sent directly in English, and the language picker is hidden.
+- Search is fully local. Photos may fetch iCloud originals depending on library state.
 
 ## Acknowledgements
 
-- Apple MobileCLIP resources: [apple/ml-mobileclip](https://github.com/apple/ml-mobileclip)
-- Tokenizer base from Hugging Face swift-coreml-transformers
+- [Apple MobileCLIP](https://github.com/apple/ml-mobileclip)
+- [Google SigLIP2](https://huggingface.co/google/siglip2-base-patch16-224)
+- Tokenizer base from [Hugging Face swift-coreml-transformers](https://github.com/huggingface/swift-coreml-transformers)

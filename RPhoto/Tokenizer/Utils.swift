@@ -18,6 +18,14 @@ struct Utils {
         return (result, diff)
     }
 
+    /// Time an async block in seconds and return (output, time)
+    static func time<T>(_ block: () async throws -> T) async rethrows -> (T, Double) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let result = try await block()
+        let diff = CFAbsoluteTimeGetCurrent() - startTime
+        return (result, diff)
+    }
+
     /// Return unix timestamp in ms
     static func dateNow() -> Int64 {
         // Use `Int` when we don't support 32-bits devices/OSes anymore.

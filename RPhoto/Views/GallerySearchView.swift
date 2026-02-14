@@ -288,8 +288,17 @@ struct GallerySearchView: View {
                                     .foregroundStyle(.secondary)
                             }
 
-                            if let stats = manager.encodingStats {
-                                Text(String(format: "Total: %.2fs | Avg: %.2fs", stats.total, stats.average))
+                            if let ss = manager.searchStats {
+                                Text(String(format: "Tok: %.0fms | Enc: %.0fms | Sim: %.0fms | Total: %.0fms",
+                                            ss.tokenization * 1000,
+                                            ss.textEncoding * 1000,
+                                            ss.similarity * 1000,
+                                            ss.total * 1000))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else if let es = manager.encodingStats {
+                                Text(String(format: "Img: %.2fs total | %.2fs avg (%d)",
+                                            es.total, es.average, manager.newlyEncodedCount))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             } else {

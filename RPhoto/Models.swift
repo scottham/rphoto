@@ -141,9 +141,15 @@ public struct TinyCLIPModel: CLIPEncoder {
 
 public struct SigLIP2Model: CLIPEncoder {
 
+    private static func makeConfig() -> MLModelConfiguration {
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuAndNeuralEngine
+        return config
+    }
+
     let imageEncoder = AsyncFactory {
         do {
-            return try SigLIP2_Vision()
+            return try SigLIP2_Vision(configuration: makeConfig())
         } catch {
             fatalError("Failed to initialize ML model: \(error)")
         }
@@ -151,7 +157,7 @@ public struct SigLIP2Model: CLIPEncoder {
 
     let textEncoder = AsyncFactory {
         do {
-            return try SigLIP2_Text()
+            return try SigLIP2_Text(configuration: makeConfig())
         } catch {
             fatalError("Failed to initialize ML model: \(error)")
         }

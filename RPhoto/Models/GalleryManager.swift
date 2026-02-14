@@ -39,6 +39,7 @@ class GalleryManager: ObservableObject {
 
     @Published var selectedModel: ModelConfiguration = defaultModel
     @Published var encodingStats: (total: Double, average: Double)?
+    @Published var searchStats: (tokenization: Double, textEncoding: Double, similarity: Double, total: Double)?
 
     private var allImages: [GalleryImage] = []
     private var selectedAssetIds: [String] = []
@@ -102,6 +103,7 @@ class GalleryManager: ObservableObject {
 
         resetInMemoryIndex()
         encodingStats = nil
+        searchStats = nil
 
         async let m: Void = model.load()
         async let t = tokenizer.get()
@@ -249,7 +251,10 @@ class GalleryManager: ObservableObject {
         }
 
         do {
+            let searchStartTime = CFAbsoluteTimeGetCurrent()
+
             searchStatusText = "Encoding query..."
+            let tokenizationStart = CFAbsoluteTimeGetCurrent()
             let currentTokenizer = await tokenizer.get()
             let tokenIds = currentTokenizer.encode_full(
                 text: text,
@@ -260,8 +265,11 @@ class GalleryManager: ObservableObject {
             for (index, value) in tokenIds.enumerated() {
                 inputBox[index] = NSNumber(value: value)
             }
+            let tokenizationTime = CFAbsoluteTimeGetCurrent() - tokenizationStart
 
-            let textEmbedding = try await model.encode(text: inputBox)
+            let (textEmbedding, textEncodeTime) = try await Utils.time {
+                try await model.encode(text: inputBox)
+            }
             guard let normalizedQueryEmbedding = normalizedEmbedding(from: textEmbedding) else {
                 displayedImages = []
                 searchProgress = 0
@@ -271,10 +279,20 @@ class GalleryManager: ObservableObject {
 
             searchProgress = 0.15
             searchStatusText = "Calculating similarities..."
+            let similarityStart = CFAbsoluteTimeGetCurrent()
             await scoreAllImages(
                 using: normalizedQueryEmbedding,
                 progressStart: 0.15,
                 progressSpan: 0.65
+            )
+            let similarityTime = CFAbsoluteTimeGetCurrent() - similarityStart
+
+            let totalSearchTime = CFAbsoluteTimeGetCurrent() - searchStartTime
+            searchStats = (
+                tokenization: tokenizationTime,
+                textEncoding: textEncodeTime,
+                similarity: similarityTime,
+                total: totalSearchTime
             )
 
             searchStatusText = "Loading top results..."
@@ -372,6 +390,7 @@ class GalleryManager: ObservableObject {
         guard !missingIds.isEmpty else { return }
 
         var encodedCount = 0
+        var totalEncodeTime: Double = 0
         let total = Double(missingIds.count)
 
         for (offset, id) in missingIds.enumerated() {
@@ -399,7 +418,11 @@ class GalleryManager: ObservableObject {
             }
 
             do {
-                let embedding = try await model.encode(image: pixelBuffer)
+                let (embedding, encodeTime) = try await Utils.time {
+                    try await model.encode(image: pixelBuffer)
+                }
+                totalEncodeTime += encodeTime
+
                 guard let normalizedVector = normalizedEmbedding(from: embedding) else {
                     continue
                 }
@@ -418,6 +441,12 @@ class GalleryManager: ObservableObject {
 
         try? context.save()
         newlyEncodedCount = encodedCount
+        if encodedCount > 0 {
+            encodingStats = (
+                total: totalEncodeTime,
+                average: totalEncodeTime / Double(encodedCount)
+            )
+        }
     }
 
     private func scoreAllImages(

@@ -27,7 +27,6 @@ targets:
       - sdk: Vision.framework
       - sdk: CoreML.framework
       - sdk: PhotosUI.framework
-      - sdk: Translation.framework
 schemes:
   RPhoto:
     build:

@@ -6,7 +6,7 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 ## Features
 
 - Natural-language search over your photo library.
-- Multilingual query support — select an input language and the app translates to English before search. The translation panel only appears when a language pack needs to be installed.
+- Multilingual query support — select an input language and the app translates to English before search using Google ML Kit Translation.
 - Persistent local embedding cache (SwiftData) for fast repeat searches.
 - Switchable model backends:
   - **MobileCLIP-S2** — compact, fast; good default.
@@ -20,7 +20,7 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 1. Sync currently accessible `PHAsset` image IDs.
 2. Restore cached embeddings from SwiftData.
 3. Backfill missing image embeddings with the selected CoreML vision encoder.
-4. If the user-selected input language is not English, translate the query to English using Apple's Translation framework (iOS 18+). If the required language pack is not installed, search is blocked with guidance on which pack to download.
+4. If the user-selected input language is not English, the app checks ML Kit model availability. If missing, it prompts to download the model on demand, then translates to English and continues search.
 5. Encode the final English query with the corresponding tokenizer (OpenAI BPE for MobileCLIP/TinyCLIP, SentencePiece BPE for SigLIP2) and CoreML text encoder.
 6. Compute cosine similarity against indexed image embeddings.
 7. Sort and display Top-K results.
@@ -42,14 +42,18 @@ SigLIP2 notes:
 
 1. Clone the repository.
 2. Place CoreML `.mlpackage` weight files under `RPhoto/Models/`. The model structure files (`model.mlmodel`, `Manifest.json`) are tracked in git; only the large `weight.bin` files need to be added locally.
-3. Open `RPhoto.xcodeproj` and build for iOS 18+ (or Mac — Designed for iPad).
+3. Install dependencies with `pod install`.
+4. Open `RPhoto.xcworkspace` and build for iOS 18+ (or Mac — Designed for iPad).
 
 ## Notes
 
-- iOS 18+ required (Translation framework dependency).
+- iOS 18+ required.
+- CocoaPods is required for `GoogleMLKit/Translate`.
+- Translation has a single implementation path on iOS 18+ and Mac (Designed for iPad); there is no longer an iOS-version split branch.
 - Model weight binaries are gitignored (`RPhoto/Models/**/weights/*.bin`).
 - First launch requires photo library permission. Use **Sync Accessible Photos** after permission changes.
-- On Mac (Designed for iPad), the Translation framework is bypassed — queries are sent directly in English, and the language picker is hidden.
+- Non-English translation models are downloaded on demand, then usable offline.
+- On Mac (Designed for iPad), translation uses the same ML Kit path as iPhone/iPad.
 - Search is fully local. Photos may fetch iCloud originals depending on library state.
 
 ## Acknowledgements

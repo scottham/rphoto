@@ -51,7 +51,7 @@ public let models: [ModelConfiguration] = [
     .init(name: "MobileCLIP-S2",
           factory: { S2Model() },
           tokenizerFactory: { CLIPTokenizer(vocabFileName: "clip-vocab", mergesFileName: "clip-merges") }),
-    .init(name: "SigLIP2",
+    .init(name: "Siglip2",
           factory: { SigLIP2Model() },
           tokenizerFactory: { SigLIP2Tokenizer() }),
     .init(name: "TinyCLIP",
@@ -169,7 +169,7 @@ public struct SigLIP2Model: CLIPEncoder {
         _ = await (t, i)
     }
 
-    let targetImageSize = CGSize(width: 224, height: 224)
+    let targetImageSize = CGSize(width: 256, height: 256)
 
     func encode(image: CVPixelBuffer) async throws -> MLMultiArray {
         try await imageEncoder.get().prediction(image: image).embedding

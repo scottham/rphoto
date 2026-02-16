@@ -46,3 +46,6 @@ RPhoto/Models/mobileclip_blt_text.mlpackage/
 
 # OpenCode skills (installed via uipro-cli)
 .opencode/skills/ui-ux-pro-max/
+
+# Local assistant/tooling metadata
+.claude/

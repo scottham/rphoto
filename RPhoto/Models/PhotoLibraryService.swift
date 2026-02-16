@@ -19,6 +19,11 @@ struct PhotoAssetMetadata {
 struct PhotoLibraryService {
     private let imageManager = PHImageManager.default()
 
+    private enum DegradedImagePolicy {
+        case fallbackIfNeeded
+        case acceptFirst
+    }
+
     func currentAuthorizationStatus() -> PHAuthorizationStatus {
         PHPhotoLibrary.authorizationStatus(for: .readWrite)
     }
@@ -100,15 +105,17 @@ struct PhotoLibraryService {
 
         let options = PHImageRequestOptions()
         options.isSynchronous = false
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
+        // Never trigger iCloud download. Use only local photo data.
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .opportunistic
         options.resizeMode = .fast
 
         return await requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFill,
-            options: options
+            options: options,
+            degradedImagePolicy: .fallbackIfNeeded
         )
     }
 
@@ -119,15 +126,17 @@ struct PhotoLibraryService {
 
         let options = PHImageRequestOptions()
         options.isSynchronous = false
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
+        // Never trigger iCloud download. If only a local thumbnail exists, encode with it.
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .opportunistic
         options.resizeMode = .exact
 
         return await requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFill,
-            options: options
+            options: options,
+            degradedImagePolicy: .acceptFirst
         )
     }
 
@@ -138,15 +147,17 @@ struct PhotoLibraryService {
 
         let options = PHImageRequestOptions()
         options.isSynchronous = false
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
+        // Never trigger iCloud download. Show best local image available.
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .opportunistic
         options.resizeMode = .exact
 
         return await requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit,
-            options: options
+            options: options,
+            degradedImagePolicy: .fallbackIfNeeded
         )
     }
 
@@ -184,10 +195,20 @@ struct PhotoLibraryService {
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode,
-        options: PHImageRequestOptions
+        options: PHImageRequestOptions,
+        degradedImagePolicy: DegradedImagePolicy
     ) async -> UIImage? {
         await withCheckedContinuation { continuation in
             var hasResumed = false
+            var degradedCandidate: UIImage?
+
+            func resumeOnce(_ image: UIImage?) {
+                guard !hasResumed else {
+                    return
+                }
+                hasResumed = true
+                continuation.resume(returning: image)
+            }
 
             imageManager.requestImage(
                 for: asset,
@@ -195,29 +216,45 @@ struct PhotoLibraryService {
                 contentMode: contentMode,
                 options: options
             ) { image, info in
-                if hasResumed {
-                    return
-                }
-
                 if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    hasResumed = true
-                    continuation.resume(returning: nil)
+                    resumeOnce(nil)
                     return
                 }
 
                 if info?[PHImageErrorKey] != nil {
-                    hasResumed = true
-                    continuation.resume(returning: nil)
+                    resumeOnce(nil)
                     return
                 }
 
                 let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool ?? false
+                let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool ?? false
                 if isDegraded {
+                    guard let image else {
+                        return
+                    }
+
+                    switch degradedImagePolicy {
+                    case .acceptFirst:
+                        resumeOnce(image)
+                    case .fallbackIfNeeded:
+                        degradedCandidate = image
+                        if isInCloud && !options.isNetworkAccessAllowed {
+                            // The full-quality image is only in iCloud; return local degraded image directly.
+                            resumeOnce(image)
+                        }
+                    }
                     return
                 }
 
-                hasResumed = true
-                continuation.resume(returning: image)
+                if let image {
+                    resumeOnce(image)
+                    return
+                }
+
+                switch degradedImagePolicy {
+                case .acceptFirst, .fallbackIfNeeded:
+                    resumeOnce(degradedCandidate)
+                }
             }
         }
     }

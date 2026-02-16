@@ -19,7 +19,7 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 
 1. Sync currently accessible `PHAsset` image IDs.
 2. Restore cached embeddings from SwiftData.
-3. Backfill missing image embeddings with the selected CoreML vision encoder.
+3. Backfill missing image embeddings with the selected CoreML vision encoder, using only locally available photo data (including local thumbnails when full originals are not on-device).
 4. If the user-selected input language is not English, the app checks ML Kit model availability. If missing, it prompts to download the model on demand, then translates to English and continues search.
 5. Encode the final English query with the corresponding tokenizer (OpenAI BPE for MobileCLIP/TinyCLIP, SentencePiece BPE for SigLIP2) and CoreML text encoder.
 6. Compute cosine similarity against indexed image embeddings.
@@ -54,7 +54,8 @@ SigLIP2 notes:
 - First launch requires photo library permission. Use **Sync Accessible Photos** after permission changes.
 - Non-English translation models are downloaded on demand, then usable offline.
 - On Mac (Designed for iPad), translation uses the same ML Kit path as iPhone/iPad.
-- Search is fully local. Photos may fetch iCloud originals depending on library state.
+- Search is fully local. Photo loading is configured to avoid iCloud-triggered downloads (`PHImageRequestOptions.isNetworkAccessAllowed = false`).
+- If a photo's full original is only in iCloud, the app uses whatever local representation is available (for example, thumbnail/degraded image) for encoding and display.
 
 ## Acknowledgements
 

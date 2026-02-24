@@ -27,7 +27,7 @@ class GalleryManager: ObservableObject {
     @Published var searchProgress: Double = 0
     @Published var searchStatusText = "Searching photos..."
     @Published var photoAuthorizationStatus: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-    @Published var topK: Int = 20 {
+    @Published var topK: Int = 10 {
         didSet {
             if !lastSearchText.isEmpty {
                 Task {
@@ -390,7 +390,7 @@ class GalleryManager: ObservableObject {
         guard !missingIds.isEmpty else { return }
 
         var encodedCount = 0
-        var totalEncodeTime: Double = 0
+        let backfillStartTime = CFAbsoluteTimeGetCurrent()
         let total = Double(missingIds.count)
 
         for (offset, id) in missingIds.enumerated() {
@@ -418,10 +418,9 @@ class GalleryManager: ObservableObject {
             }
 
             do {
-                let (embedding, encodeTime) = try await Utils.time {
+                let (embedding, _) = try await Utils.time {
                     try await model.encode(image: pixelBuffer)
                 }
-                totalEncodeTime += encodeTime
 
                 guard let normalizedVector = normalizedEmbedding(from: embedding) else {
                     continue
@@ -442,9 +441,10 @@ class GalleryManager: ObservableObject {
         try? context.save()
         newlyEncodedCount = encodedCount
         if encodedCount > 0 {
+            let totalElapsedTime = CFAbsoluteTimeGetCurrent() - backfillStartTime
             encodingStats = (
-                total: totalEncodeTime,
-                average: totalEncodeTime / Double(encodedCount)
+                total: totalElapsedTime,
+                average: totalElapsedTime / Double(encodedCount)
             )
         }
     }

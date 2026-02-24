@@ -56,6 +56,8 @@ SigLIP2 notes:
 - On Mac (Designed for iPad), translation uses the same ML Kit path as iPhone/iPad.
 - Search is fully local. Photo loading is configured to avoid iCloud-triggered downloads (`PHImageRequestOptions.isNetworkAccessAllowed = false`).
 - If a photo's full original is only in iCloud, the app uses whatever local representation is available (for example, thumbnail/degraded image) for encoding and display.
+- Privacy policy URL: `https://gist.github.com/scottham/43b16e9e73acb809e5c68263203201e6/raw/privacy_policy_rphoto.md`
+- Local source for privacy policy content: `privacy_policy_rphoto.md`
 
 ## Acknowledgements
 

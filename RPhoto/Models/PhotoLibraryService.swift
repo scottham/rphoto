@@ -22,6 +22,7 @@ struct PhotoLibraryService {
     private enum DegradedImagePolicy {
         case fallbackIfNeeded
         case acceptFirst
+        case requireNonDegraded
     }
 
     func currentAuthorizationStatus() -> PHAuthorizationStatus {
@@ -126,9 +127,9 @@ struct PhotoLibraryService {
 
         let options = PHImageRequestOptions()
         options.isSynchronous = false
-        // Never trigger iCloud download. If only a local thumbnail exists, encode with it.
+        // Never trigger iCloud download. Prefer locally available high-quality image for encoding.
         options.isNetworkAccessAllowed = false
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
 
         return await requestImage(
@@ -136,7 +137,7 @@ struct PhotoLibraryService {
             targetSize: targetSize,
             contentMode: .aspectFill,
             options: options,
-            degradedImagePolicy: .acceptFirst
+            degradedImagePolicy: .requireNonDegraded
         )
     }
 
@@ -242,6 +243,12 @@ struct PhotoLibraryService {
                             // The full-quality image is only in iCloud; return local degraded image directly.
                             resumeOnce(image)
                         }
+                    case .requireNonDegraded:
+                        // Encoding path: do not use degraded images.
+                        if isInCloud && !options.isNetworkAccessAllowed {
+                            // Full-quality image is cloud-only and network is disabled.
+                            resumeOnce(nil)
+                        }
                     }
                     return
                 }
@@ -254,6 +261,8 @@ struct PhotoLibraryService {
                 switch degradedImagePolicy {
                 case .acceptFirst, .fallbackIfNeeded:
                     resumeOnce(degradedCandidate)
+                case .requireNonDegraded:
+                    resumeOnce(nil)
                 }
             }
         }

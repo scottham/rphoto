@@ -7,9 +7,14 @@ import Foundation
 import MLKitCommon
 import MLKitTranslate
 
+private let isMLKitTranslationDebugEnabled = false
+
 private func mlKitTranslationDebug(_ message: String) {
 #if DEBUG
+    guard isMLKitTranslationDebugEnabled else { return }
     print("[MLKitTranslationService] \(message)")
+#else
+    _ = message
 #endif
 }
 
@@ -86,7 +91,8 @@ extension TranslationProvider {
 final class MLKitTranslationService: TranslationProvider {
     static let shared = MLKitTranslationService()
 
-    private let modelManager = ModelManager.modelManager()
+    private static let sharedModelManager = ModelManager.modelManager()
+    private var modelManager: ModelManager { Self.sharedModelManager }
     private let translatorCacheQueue = DispatchQueue(
         label: "com.rphoto.mlkit.translation.translator-cache",
         qos: .userInitiated

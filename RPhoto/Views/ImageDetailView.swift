@@ -12,6 +12,7 @@ struct ImageDetailView: View {
     @State private var isMetadataVisible = false
     @State private var isAtMinimumZoom = true
     @State private var verticalDragOffset: CGFloat = 0
+    @State private var sharePayload: SharePayload?
 
     private let photoLibraryService = PhotoLibraryService()
 
@@ -49,7 +50,15 @@ struct ImageDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
         .statusBarHidden(isMetadataVisible)
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(activityItems: [payload.image])
+        }
     }
+}
+
+private struct SharePayload: Identifiable {
+    let id = UUID()
+    let image: UIImage
 }
 
 private extension ImageDetailView {
@@ -63,6 +72,10 @@ private extension ImageDetailView {
     var contentOpacity: Double {
         let progress = min(max(verticalDragOffset / 260, 0), 1)
         return 1 - Double(progress * 0.45)
+    }
+
+    var shareImage: UIImage? {
+        displayImage ?? galleryImage.image
     }
 
     var topControls: some View {
@@ -85,6 +98,17 @@ private extension ImageDetailView {
                 .padding(.vertical, 6)
                 .background(.black.opacity(0.45))
                 .clipShape(Capsule())
+
+            Button(action: shareCurrentPhoto) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(.black.opacity(0.45))
+                    .clipShape(Circle())
+            }
+            .disabled(shareImage == nil)
+            .opacity(shareImage == nil ? 0.45 : 1)
 
             Button(action: toggleMetadata) {
                 Image(systemName: isMetadataVisible ? "info.circle.fill" : "info.circle")
@@ -248,6 +272,11 @@ private extension ImageDetailView {
         }
     }
 
+    func shareCurrentPhoto() {
+        guard let shareImage else { return }
+        sharePayload = SharePayload(image: shareImage)
+    }
+
     func loadPhotoDetails(for size: CGSize) async {
         let scale = UIScreen.main.scale
         let targetSize = CGSize(
@@ -267,6 +296,16 @@ private extension ImageDetailView {
         }
         metadata = loadedMetadata
     }
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
 // MARK: - ZoomableImageView

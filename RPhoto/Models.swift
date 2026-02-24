@@ -48,9 +48,6 @@ public struct ModelConfiguration: Identifiable, Hashable {
 }
 
 public let models: [ModelConfiguration] = [
-    .init(name: "MobileCLIP-S2",
-          factory: { S2Model() },
-          tokenizerFactory: { CLIPTokenizer(vocabFileName: "clip-vocab", mergesFileName: "clip-merges") }),
     .init(name: "Siglip2",
           factory: { SigLIP2Model() },
           tokenizerFactory: { SigLIP2Tokenizer() }),
@@ -61,45 +58,10 @@ public let models: [ModelConfiguration] = [
 ]
 
 public let defaultModel = ModelConfiguration(
-    name: "MobileCLIP-S2",
-    factory: { S2Model() },
-    tokenizerFactory: { CLIPTokenizer(vocabFileName: "clip-vocab", mergesFileName: "clip-merges") }
+    name: "Siglip2",
+    factory: { SigLIP2Model() },
+    tokenizerFactory: { SigLIP2Tokenizer() }
 )
-
-public struct S2Model: CLIPEncoder {
-
-    let imageEncoder = AsyncFactory {
-        do {
-            return try mobileclip_s2_image()
-        } catch {
-            fatalError("Failed to initialize ML model: \(error)")
-        }
-    }
-
-    let textEncoder = AsyncFactory {
-        do {
-            return try mobileclip_s2_text()
-        } catch {
-            fatalError("Failed to initialize ML model: \(error)")
-        }
-    }
-
-    func load() async {
-        async let t = textEncoder.get()
-        async let i = imageEncoder.get()
-        _ = await (t, i)
-    }
-
-    let targetImageSize = CGSize(width: 256, height: 256)
-
-    func encode(image: CVPixelBuffer) async throws -> MLMultiArray {
-        try await imageEncoder.get().prediction(image: image).final_emb_1
-    }
-
-    func encode(text: MLMultiArray) async throws -> MLMultiArray {
-        try await textEncoder.get().prediction(text: text).final_emb_1
-    }
-}
 
 public struct TinyCLIPModel: CLIPEncoder {
 

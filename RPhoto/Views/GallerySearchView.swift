@@ -7,12 +7,8 @@ import SwiftUI
 import PhotosUI
 import Photos
 import SwiftData
-import OSLog
 
-private let translationLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "RPhoto",
-    category: "TranslationFlow"
-)
+private let isTranslationFlowDebugEnabled = false
 
 private struct TranslationSearchRequest: Equatable {
     let id: UUID
@@ -99,6 +95,128 @@ private enum TranslationModelFilter: String, CaseIterable, Identifiable {
     }
 }
 
+private enum TranslationAttribution {
+    static let providerLine = "Powered by Google Translate"
+    static let detailLine = "On-device translation uses Google ML Kit language models."
+    static let disclaimerLine = "Machine translation may be inaccurate."
+    static let requirementsURL = URL(string: "https://cloud.google.com/translate/attribution")!
+}
+
+private enum AppLegalLinks {
+    static let privacyPolicyURL = URL(
+        string: "https://gist.github.com/scottham/43b16e9e73acb809e5c68263203201e6/raw/privacy_policy_rphoto.md"
+    )!
+}
+
+private struct PrivacyPolicyView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let onlinePolicyURL: URL
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Last updated: February 17, 2026")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    policySection(
+                        title: "Overview",
+                        body: "RPhoto provides semantic photo search on your device. Photo indexing, embedding generation, and retrieval are designed to run locally inside the app sandbox."
+                    )
+
+                    policySection(
+                        title: "Data Processed On Device",
+                        body: """
+                        The app may process:
+                        - Selected photo local identifiers and image pixels available on-device.
+                        - Generated image embeddings used for semantic search.
+                        - Search query text.
+                        - Translation model download state.
+                        """
+                    )
+
+                    policySection(
+                        title: "How Data Is Used",
+                        body: """
+                        Processed data is used only for app features such as:
+                        - Building and updating the local search index.
+                        - Running local semantic search.
+                        - Translating non-English queries to English for retrieval.
+                        """
+                    )
+
+                    policySection(
+                        title: "Network Usage",
+                        body: """
+                        - Photo search and embedding generation run locally.
+                        - On first use of a non-English language, the app may download a Google ML Kit translation model after user confirmation.
+                        - Translation model download may use Wi-Fi or cellular network.
+                        - After a model is downloaded, translation can run offline.
+                        - Photo loading is configured to avoid triggering iCloud original downloads. If only iCloud originals exist, the app uses local available representations (for example, thumbnails) when possible.
+                        """
+                    )
+
+                    policySection(
+                        title: "Third-Party Technology",
+                        body: """
+                        The app uses Google ML Kit Translation for on-device translation models.
+                        - Attribution: Powered by Google Translate.
+                        - Translation attribution requirements: https://cloud.google.com/translate/attribution
+                        - Google Privacy Policy: https://policies.google.com/privacy
+                        """
+                    )
+
+                    policySection(
+                        title: "Permissions",
+                        body: """
+                        The app requests photo library access to search selected photos. You can change this anytime in iOS Settings.
+                        """
+                    )
+
+                    policySection(
+                        title: "Data Retention and Deletion",
+                        body: """
+                        Search cache data (including embeddings) is stored locally in the app sandbox. You can remove it by clearing app cache in-app or deleting the app from your device.
+                        """
+                    )
+
+                    policySection(
+                        title: "Contact",
+                        body: "For privacy questions, use the developer contact channel listed on the app's distribution page."
+                    )
+
+                    Link("Open Online Privacy Policy", destination: onlinePolicyURL)
+                        .font(.subheadline)
+                        .padding(.top, 4)
+                }
+                .padding()
+            }
+            .navigationTitle("Privacy Policy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func policySection(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.headline)
+            Text(body)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+        }
+    }
+}
+
 private struct TranslationModelSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -144,6 +262,23 @@ private struct TranslationModelSettingsView: View {
                         }
                         .pickerStyle(.segmented)
                     }
+                }
+
+                Section("Attribution") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(TranslationAttribution.providerLine)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text(TranslationAttribution.detailLine)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(TranslationAttribution.disclaimerLine)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Link("Attribution requirements", destination: TranslationAttribution.requirementsURL)
+                            .font(.caption)
+                    }
+                    .padding(.vertical, 2)
                 }
 
                 Section("Language Models") {
@@ -407,13 +542,15 @@ struct GallerySearchView: View {
         InputLanguageOption(id: "en", displayName: "English")
     ]
     @State private var isLoadingSupportedLanguages = false
+    @State private var hasLoadedSupportedLanguages = false
     @State private var selectedInputLanguageDisplayName = "English"
     @State private var pendingDownloadPrompt: TranslationDownloadPrompt?
     @State private var isShowingDownloadPrompt = false
     @State private var translationDownloadProgress: Double?
     @State private var isShowingTranslationModels = false
+    @State private var isShowingPrivacyPolicy = false
 
-    private let translationProvider: any TranslationProvider = MLKitTranslationService.shared
+    private var translationProvider: any TranslationProvider { MLKitTranslationService.shared }
     private let targetLanguageCode = "en"
     private let approxTranslationModelSizeMB = 30
 
@@ -467,8 +604,11 @@ struct GallerySearchView: View {
                         .submitLabel(.search)
 
                     Menu {
-                        if isLoadingSupportedLanguages {
+                        if !hasLoadedSupportedLanguages || isLoadingSupportedLanguages {
                             Text("Loading languages...")
+                                .task {
+                                    await ensureSupportedInputLanguagesLoaded()
+                                }
                         }
 
                         Picker("Input Language", selection: $selectedInputLanguageIdentifier) {
@@ -674,6 +814,12 @@ struct GallerySearchView: View {
                             openPhotoSettings()
                         }
                         }
+
+                        Section("Legal") {
+                            Button("Privacy Policy") {
+                                isShowingPrivacyPolicy = true
+                            }
+                        }
                     } label: {
                         Image(systemName: "gearshape")
                     }
@@ -697,6 +843,9 @@ struct GallerySearchView: View {
                     approxModelSizeMB: approxTranslationModelSizeMB
                 )
             }
+            .sheet(isPresented: $isShowingPrivacyPolicy) {
+                PrivacyPolicyView(onlinePolicyURL: AppLegalLinks.privacyPolicyURL)
+            }
             .onChange(of: manager.selectedModel) { _, _ in
                 Task {
                     await rerunWithEffectiveQuery()
@@ -715,13 +864,12 @@ struct GallerySearchView: View {
                 waitingPermissionRefresh = false
                 Task {
                     await manager.refreshAfterPermissionPotentiallyChanged(context: modelContext)
-                    await loadSupportedInputLanguages()
                     await rerunWithEffectiveQuery()
                 }
             }
             .task {
                 await manager.bootstrapPhotoAccess(context: modelContext)
-                await loadSupportedInputLanguages()
+                selectedInputLanguageDisplayName = resolvedSelectedInputLanguageDisplayName()
             }
             .alert(
                 "Download Translation Model?",
@@ -774,6 +922,10 @@ private extension GallerySearchView {
             if isTranslating {
                 Text(translationStatusText)
                     .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(TranslationAttribution.providerLine)
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
@@ -1228,9 +1380,11 @@ private extension GallerySearchView {
 
     func translationDebug(_ message: String) {
 #if DEBUG
+        guard isTranslationFlowDebugEnabled else { return }
         print("[TranslationFlow] \(message)")
+#else
+        _ = message
 #endif
-        translationLogger.debug("\(message, privacy: .public)")
     }
 
     func translationRequestSummary() -> String {
@@ -1239,6 +1393,13 @@ private extension GallerySearchView {
             return "active=\(active) pending=\(pending.id.uuidString) src=\(pending.sourceLanguageCode) len=\(pending.rawText.count)"
         }
         return "active=\(active) pending=nil"
+    }
+
+    func ensureSupportedInputLanguagesLoaded() async {
+        guard !hasLoadedSupportedLanguages, !isLoadingSupportedLanguages else {
+            return
+        }
+        await loadSupportedInputLanguages()
     }
 
     func loadSupportedInputLanguages() async {
@@ -1287,6 +1448,7 @@ private extension GallerySearchView {
         }
 
         selectedInputLanguageDisplayName = resolvedSelectedInputLanguageDisplayName()
+        hasLoadedSupportedLanguages = true
     }
 
     func isSupportedInputLanguageIdentifier(_ identifier: String) -> Bool {
@@ -1382,7 +1544,7 @@ private extension GallerySearchView {
 
     func searchStatsSummaryText(_ stats: (tokenization: Double, textEncoding: Double, similarity: Double, total: Double)) -> String {
         String(
-            format: "%.0fms",
+            format: "Search · Tot %.0fms",
             stats.total * 1000
         )
     }

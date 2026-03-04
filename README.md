@@ -9,9 +9,8 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 - Multilingual query support — select an input language and the app translates to English before search using Google ML Kit Translation.
 - Persistent local embedding cache (SwiftData) for fast repeat searches.
 - Switchable model backends:
-  - **MobileCLIP-S2** — compact, fast; good default.
+  - **MobileCLIP2-S2** — compact, fast; good default.
   - **SigLIP2** (FP16) — Google's SigLIP2-base-patch16-224, higher capacity with 768-dim embeddings and 256K Gemma/SentencePiece vocabulary.
-  - **TinyCLIP** — smallest footprint.
 - Top-K retrieval control (5 / 10 / 20 / 50 / 100).
 - Cache inspector view for checking per-model embedding counts and clearing data.
 
@@ -21,7 +20,7 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 2. Restore cached embeddings from SwiftData.
 3. Backfill missing image embeddings with the selected CoreML vision encoder, using only locally available photo data (including local thumbnails when full originals are not on-device).
 4. If the user-selected input language is not English, the app checks ML Kit model availability. If missing, it prompts to download the model on demand, then translates to English and continues search.
-5. Encode the final English query with the corresponding tokenizer (OpenAI BPE for MobileCLIP/TinyCLIP, SentencePiece BPE for SigLIP2) and CoreML text encoder.
+5. Encode the final English query with the corresponding tokenizer (OpenAI BPE for MobileCLIP2-S2, SentencePiece BPE for SigLIP2) and CoreML text encoder.
 6. Compute cosine similarity against indexed image embeddings.
 7. Sort and display Top-K results.
 
@@ -29,9 +28,8 @@ Indexing, embedding generation, and similarity retrieval run entirely on-device 
 
 | Model | Image Size | Embedding Dim | Context Length | Precision | Weights |
 |-------|-----------|---------------|----------------|-----------|---------|
-| MobileCLIP-S2 | 256×256 | 512 | 77 | FP16 | ~189 MB |
+| MobileCLIP2-S2 | 256×256 | 512 | 77 | FP16 | ~189 MB |
 | SigLIP2 | 224×224 | 768 | 64 | FP16 | ~715 MB |
-| TinyCLIP | 224×224 | 512 | 77 | FP16 | ~220 MB |
 
 SigLIP2 notes:
 - Input text is lowercased before tokenization (Gemma tokenizer requirement).
@@ -43,11 +41,13 @@ SigLIP2 notes:
 1. Clone the repository.
 2. Place CoreML `.mlpackage` weight files under `RPhoto/Models/`. The model structure files (`model.mlmodel`, `Manifest.json`) are tracked in git; only the large `weight.bin` files need to be added locally.
 3. Install dependencies with `pod install`.
-4. Open `RPhoto.xcworkspace` and build for iOS 18+ (or Mac — Designed for iPad).
+4. Open `RPhoto.xcworkspace` and run on Mac (Designed for iPad) or a physical iPhone/iPad.
 
 ## Notes
 
 - iOS 18+ required.
+- Do not use the iOS Simulator for validation in this project.
+- When testing locally, prefer the Mac app path (Designed for iPad). If needed, use a physical iPhone/iPad.
 - CocoaPods is required for `GoogleMLKit/Translate`.
 - Translation has a single implementation path on iOS 18+ and Mac (Designed for iPad); there is no longer an iOS-version split branch.
 - Model weight binaries are gitignored (`RPhoto/Models/**/weights/*.bin`).

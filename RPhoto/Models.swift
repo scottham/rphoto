@@ -51,10 +51,11 @@ public let models: [ModelConfiguration] = [
     .init(name: "Siglip2",
           factory: { SigLIP2Model() },
           tokenizerFactory: { SigLIP2Tokenizer() }),
-    .init(name: "TinyCLIP",
-          padTokenId: 1,
-          factory: { TinyCLIPModel() },
-          tokenizerFactory: { CLIPTokenizer(vocabFileName: "tinyclip-vocab", mergesFileName: "tinyclip-merges") }),
+    // MobileCLIP2-S2 is intentionally disabled for now.
+    // Keep implementation below for easier future re-enable.
+    // .init(name: "MobileCLIP2-S2",
+    //       factory: { MobileCLIP2S2Model() },
+    //       tokenizerFactory: { MobileCLIP2Tokenizer() }),
 ]
 
 public let defaultModel = ModelConfiguration(
@@ -63,11 +64,15 @@ public let defaultModel = ModelConfiguration(
     tokenizerFactory: { SigLIP2Tokenizer() }
 )
 
-public struct TinyCLIPModel: CLIPEncoder {
+// NOTE:
+// MobileCLIP2-S2 support is retained as source-only reference and excluded from
+// compilation while its model bundles are removed from the project.
+#if false
+public struct MobileCLIP2S2Model: CLIPEncoder {
 
     let imageEncoder = AsyncFactory {
         do {
-            return try TinyCLIP_Vision()
+            return try MobileCLIP2_S2_Vision()
         } catch {
             fatalError("Failed to initialize ML model: \(error)")
         }
@@ -75,7 +80,7 @@ public struct TinyCLIPModel: CLIPEncoder {
 
     let textEncoder = AsyncFactory {
         do {
-            return try TinyCLIP_Text()
+            return try MobileCLIP2_S2_Text()
         } catch {
             fatalError("Failed to initialize ML model: \(error)")
         }
@@ -86,20 +91,18 @@ public struct TinyCLIPModel: CLIPEncoder {
         async let i = imageEncoder.get()
         _ = await (t, i)
     }
-    
-    let targetImageSize = CGSize(width: 224, height: 224)
+
+    let targetImageSize = CGSize(width: 256, height: 256)
 
     func encode(image: CVPixelBuffer) async throws -> MLMultiArray {
-        // TinyCLIP_Vision expects input "image" and returns "embedding"
-        // CoreML generated class usually has a prediction method taking the named inputs
         try await imageEncoder.get().prediction(image: image).embedding
     }
 
     func encode(text: MLMultiArray) async throws -> MLMultiArray {
-        // TinyCLIP_Text expects input "input_ids" and returns "embedding"
         try await textEncoder.get().prediction(input_ids: text).embedding
     }
 }
+#endif
 
 public struct SigLIP2Model: CLIPEncoder {
 

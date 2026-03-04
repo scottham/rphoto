@@ -593,65 +593,7 @@ struct GallerySearchView: View {
                     .padding(.top, 8)
                 }
 
-                // Search Bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.gray)
-                    TextField("Search your photos (e.g. 'cat', 'sunset')...", text: $searchText)
-                        .onSubmit {
-                            submitSearchPipeline()
-                        }
-                        .submitLabel(.search)
-
-                    Menu {
-                        if !hasLoadedSupportedLanguages || isLoadingSupportedLanguages {
-                            Text("Loading languages...")
-                                .task {
-                                    await ensureSupportedInputLanguagesLoaded()
-                                }
-                        }
-
-                        Picker("Input Language", selection: $selectedInputLanguageIdentifier) {
-                            ForEach(supportedInputLanguages) { languageOption in
-                                Text(languageOption.displayName).tag(languageOption.id)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(selectedInputLanguageShortCode)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(Color(.systemGray5))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    }
-                    .accessibilityLabel("Input language")
-                    .accessibilityValue(selectedInputLanguageDisplayName)
-
-                    if !searchText.isEmpty {
-                        Button(action: {
-                            searchText = ""
-                            clearSearchPipeline()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.gray)
-                        }
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal)
-
-                if shouldShowTranslationPanel {
-                    translationDiagnosticsPanel
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                }
+                searchControlsPanel
 
                 // Content
                 if manager.displayedImages.isEmpty && !manager.isProcessing && !manager.isSearching {
@@ -732,10 +674,8 @@ struct GallerySearchView: View {
                                 .fontWeight(.bold)
                         }
                         .foregroundStyle(.primary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                     }
                 }
 
@@ -895,6 +835,45 @@ struct GallerySearchView: View {
 }
 
 private extension GallerySearchView {
+    var searchControlsPanel: some View {
+        GlassEffectContainer(spacing: 12) {
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+
+                    TextField("Search your photos (e.g. 'cat', 'sunset')...", text: $searchText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onSubmit {
+                            submitSearchPipeline()
+                        }
+                        .submitLabel(.search)
+
+                    inputLanguageMenu
+
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            searchText = ""
+                            clearSearchPipeline()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .glassEffect(.regular.tint(Color.white.opacity(0.05)), in: .rect(cornerRadius: 20))
+
+                if shouldShowTranslationPanel {
+                    translationDiagnosticsPanel
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
     var shouldShowTranslationPanel: Bool {
         if isTranslating { return true }
         guard let diagnostics = translationDiagnostics else { return false }
@@ -908,8 +887,38 @@ private extension GallerySearchView {
             .map { String($0).uppercased() } ?? "EN"
     }
 
+    var inputLanguageMenu: some View {
+        Menu {
+            if !hasLoadedSupportedLanguages || isLoadingSupportedLanguages {
+                Text("Loading languages...")
+                    .task {
+                        await ensureSupportedInputLanguagesLoaded()
+                    }
+            }
+
+            Picker("Input Language", selection: $selectedInputLanguageIdentifier) {
+                ForEach(supportedInputLanguages) { languageOption in
+                    Text(languageOption.displayName).tag(languageOption.id)
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(selectedInputLanguageShortCode)
+                    .font(.caption.weight(.semibold))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .glassEffect(.regular.tint(Color.white.opacity(0.05)).interactive(), in: .capsule)
+        }
+        .accessibilityLabel("Input language")
+        .accessibilityValue(selectedInputLanguageDisplayName)
+    }
+
     var translationDiagnosticsPanel: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: isTranslating ? "globe.badge.chevron.backward" : "exclamationmark.triangle.fill")
                     .foregroundStyle(isTranslating ? Color.secondary : Color.red)
@@ -935,38 +944,57 @@ private extension GallerySearchView {
                     .foregroundStyle(.red)
             }
         }
-        .padding(10)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(12)
+        .glassEffect(
+            .regular.tint(isTranslating ? Color.blue.opacity(0.08) : Color.red.opacity(0.08)),
+            in: .rect(cornerRadius: 18)
+        )
     }
 
     var permissionControlsPanel: some View {
         VStack(spacing: 10) {
-            Button(action: syncAccessiblePhotos) {
-                Label("Sync Accessible Photos", systemImage: "arrow.triangle.2.circlepath")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
+            glassActionButton(
+                "Sync Accessible Photos",
+                systemImage: "arrow.triangle.2.circlepath",
+                tint: Color.accentColor.opacity(0.16),
+                action: syncAccessiblePhotos
+            )
 
             if manager.isLimitedAuthorization {
-                Button(action: openLimitedSelectionManager) {
-                    Label("Manage Limited Selection", systemImage: "person.crop.circle.badge.questionmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
+                glassActionButton(
+                    "Manage Limited Selection",
+                    systemImage: "person.crop.circle.badge.questionmark",
+                    action: openLimitedSelectionManager
+                )
             }
 
-            Button(action: openPhotoSettings) {
-                Label("Open Settings (Limited/Full)", systemImage: "gearshape")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
+            glassActionButton(
+                "Open Settings (Limited/Full)",
+                systemImage: "gearshape",
+                action: openPhotoSettings
+            )
         }
-        .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(14)
+        .glassEffect(.regular.tint(Color.white.opacity(0.04)), in: .rect(cornerRadius: 22))
         .padding(.horizontal)
         .padding(.bottom, 10)
+    }
+
+    func glassActionButton(
+        _ title: String,
+        systemImage: String,
+        tint: Color = Color.white.opacity(0.06),
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+        }
+        .foregroundStyle(.primary)
+        .glassEffect(.regular.tint(tint).interactive(), in: .rect(cornerRadius: 18))
     }
 
     func submitSearchPipeline() {

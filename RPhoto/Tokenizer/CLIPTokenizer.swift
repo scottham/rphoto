@@ -218,3 +218,24 @@ class CLIPTokenizer: TextTokenizer {
 
     }
 }
+
+/// MobileCLIP2-S2 CoreML text tower is traced with EOS pooled at the last token.
+/// Keep CLIP tokenization, but move EOS to position 76 for inference consistency.
+class MobileCLIP2Tokenizer: CLIPTokenizer {
+    private let eosTokenId = 49407
+
+    override func encode_full(text: String, padTokenId: Int = 0) -> [Int] {
+        var fullTokens = super.encode_full(text: text, padTokenId: padTokenId)
+        guard !fullTokens.isEmpty else {
+            return fullTokens
+        }
+
+        let lastIndex = fullTokens.count - 1
+        if let eosIndex = fullTokens.firstIndex(of: eosTokenId), eosIndex != lastIndex {
+            fullTokens[eosIndex] = padTokenId
+            fullTokens[lastIndex] = eosTokenId
+        }
+
+        return fullTokens
+    }
+}

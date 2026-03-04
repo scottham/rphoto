@@ -6,6 +6,8 @@ struct ImageDetailView: View {
     let galleryImage: GalleryImage
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.displayScale) private var displayScale
+    @Namespace private var glassNamespace
 
     @State private var displayImage: UIImage?
     @State private var metadata: PhotoAssetMetadata?
@@ -32,16 +34,10 @@ struct ImageDetailView: View {
                 .ignoresSafeArea()
                 .offset(y: verticalDragOffset)
                 .opacity(contentOpacity)
+                .allowsHitTesting(!isMetadataVisible)
                 .simultaneousGesture(previewGesture)
 
-                VStack(spacing: 0) {
-                    topControls
-                    Spacer()
-                    bottomControls
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+                overlayChrome
             }
             .task(id: galleryImage.sourceId) {
                 await loadPhotoDetails(for: proxy.size)
@@ -78,46 +74,33 @@ private extension ImageDetailView {
         displayImage ?? galleryImage.image
     }
 
-    var topControls: some View {
-        HStack(spacing: 12) {
-            Button(action: closePreview) {
-                Image(systemName: "chevron.down")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(.black.opacity(0.45))
-                    .clipShape(Circle())
+    var overlayChrome: some View {
+        VStack(spacing: 0) {
+            GlassEffectContainer(spacing: 12) {
+                topControls
             }
 
             Spacer()
 
-            Text(String(format: "%.2f", galleryImage.similarityScore))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.black.opacity(0.45))
-                .clipShape(Capsule())
-
-            Button(action: shareCurrentPhoto) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(.black.opacity(0.45))
-                    .clipShape(Circle())
+            GlassEffectContainer(spacing: 18) {
+                bottomControls
             }
-            .disabled(shareImage == nil)
-            .opacity(shareImage == nil ? 0.45 : 1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .zIndex(1)
+    }
 
-            Button(action: toggleMetadata) {
-                Image(systemName: isMetadataVisible ? "info.circle.fill" : "info.circle")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(.black.opacity(0.45))
-                    .clipShape(Circle())
-            }
+    var topControls: some View {
+        HStack(spacing: 10) {
+            toolbarChipButton(systemName: "chevron.down", action: closePreview)
+
+            Spacer()
+
+            similarityBadge
+
+            toolbarActionGroup
         }
     }
 
@@ -136,13 +119,13 @@ private extension ImageDetailView {
             Image(systemName: "chevron.up")
                 .font(.caption.bold())
             Text("Swipe up for photo details")
-                .font(.caption)
+                .font(.caption.weight(.medium))
         }
-        .foregroundStyle(.white.opacity(0.9))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.45))
-        .clipShape(Capsule())
+        .foregroundStyle(.white.opacity(0.96))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.tint(Color.white.opacity(0.06)).interactive(), in: .capsule)
+        .glassEffectID("metadata-panel", in: glassNamespace)
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                 isMetadataVisible = true
@@ -151,47 +134,60 @@ private extension ImageDetailView {
     }
 
     var metadataPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
             Capsule()
-                .fill(.secondary)
-                .frame(width: 36, height: 5)
+                .fill(.white.opacity(0.4))
+                .frame(width: 42, height: 5)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
 
-            Text("Photo Info")
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Photo Info")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
 
-            Divider()
-
-            infoRow(
-                title: "Captured",
-                value: {
-                    guard let creationDate = metadata?.creationDate else {
-                        return "Unknown"
-                    }
-                    return Self.metadataDateFormatter.string(from: creationDate)
-                }()
-            )
-            infoRow(
-                title: "Location",
-                value: metadata?.locationName ?? "Unknown"
-            )
-
-            if let coordinate = metadata?.coordinateText {
-                infoRow(title: "Coordinates", value: coordinate)
+                Text("Swipe down to dismiss")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
             }
 
-            if let metadata {
+            VStack(alignment: .leading, spacing: 14) {
                 infoRow(
-                    title: "Resolution",
-                    value: "\(metadata.pixelWidth) x \(metadata.pixelHeight)"
+                    title: "Captured",
+                    value: {
+                        guard let creationDate = metadata?.creationDate else {
+                            return "Unknown"
+                        }
+                        return Self.metadataDateFormatter.string(from: creationDate)
+                    }()
                 )
+                infoRow(
+                    title: "Location",
+                    value: metadata?.locationName ?? "Unknown"
+                )
+
+                if let coordinate = metadata?.coordinateText {
+                    infoRow(title: "Coordinates", value: coordinate)
+                }
+
+                if let metadata {
+                    infoRow(
+                        title: "Resolution",
+                        value: "\(metadata.pixelWidth) x \(metadata.pixelHeight)"
+                    )
+                }
             }
         }
-        .padding(14)
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .glassEffect(.regular.tint(Color.white.opacity(0.08)).interactive(), in: .rect(cornerRadius: 28))
+        .glassEffectID("metadata-panel", in: glassNamespace)
+        .onTapGesture {
+            // Consume taps so they do not fall through to the image view beneath.
+        }
         .gesture(
             DragGesture(minimumDistance: 12)
                 .onEnded { value in
@@ -207,12 +203,64 @@ private extension ImageDetailView {
     func infoRow(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.white.opacity(0.7))
             Text(value)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    var similarityBadge: some View {
+        Text(String(format: "%.2f", galleryImage.similarityScore))
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.96))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .glassEffect(.regular.tint(Color.white.opacity(0.06)), in: .capsule)
+    }
+
+    var toolbarActionGroup: some View {
+        HStack(spacing: 16) {
+            toolbarIconButton(systemName: "square.and.arrow.up", action: shareCurrentPhoto)
+                .disabled(shareImage == nil)
+                .opacity(shareImage == nil ? 0.45 : 1)
+
+            toolbarIconButton(
+                systemName: isMetadataVisible ? "info.circle.fill" : "info.circle",
+                action: toggleMetadata
+            )
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.tint(Color.white.opacity(0.06)).interactive(), in: .capsule)
+    }
+
+    func toolbarChipButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .contentShape(Capsule())
+                .glassEffect(.regular.tint(Color.white.opacity(0.06)).interactive(), in: .capsule)
+        }
+        .buttonStyle(.plain)
+    }
+
+    func toolbarIconButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     var previewGesture: some Gesture {
@@ -278,7 +326,7 @@ private extension ImageDetailView {
     }
 
     func loadPhotoDetails(for size: CGSize) async {
-        let scale = UIScreen.main.scale
+        let scale = max(displayScale, 1)
         let targetSize = CGSize(
             width: max(size.width * scale, 1200),
             height: max(size.height * scale, 1200)

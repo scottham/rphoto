@@ -7,9 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		03B27A1C50307CFC5AC54D5D /* TinyCLIP_Text.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 4C1E7773A58B97F0616354C8 /* TinyCLIP_Text.mlpackage */; };
 		0545769C4A429692EEABD087 /* SigLIP2_Vision.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 256E1DE50F15F674EA774ED5 /* SigLIP2_Vision.mlpackage */; };
-		12EAB4E23D35B5138F2B3715 /* tinyclip-vocab.json in Resources */ = {isa = PBXBuildFile; fileRef = 1F7C430956D984B8B10E6E52 /* tinyclip-vocab.json */; };
 		15F3AB41D39F540601E03F97 /* GallerySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCF91A16A2900418C40BDA2 /* GallerySearchView.swift */; };
 		28EFE9719AEBE1D3B8437C64 /* CLIPTokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CDC9CBB17895B6E7B7CFDC /* CLIPTokenizer.swift */; };
 		319D7201A9305157CE552969 /* clip-merges.txt in Resources */ = {isa = PBXBuildFile; fileRef = A297E1D46615EF3F54E2DE16 /* clip-merges.txt */; };
@@ -19,7 +17,6 @@
 		4C118A89F6E1A9398610F42A /* RPhotoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5D3DBF5A4BEEDBF5D37068 /* RPhotoApp.swift */; };
 		5292C7A82D596A69C4F5B399 /* siglip2-vocab.json in Resources */ = {isa = PBXBuildFile; fileRef = 343F28B2F0936263B43FBBB7 /* siglip2-vocab.json */; };
 		5BA78197BABF4DB94A304C5D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B575EF31CE0C9A7C7ABE3F5 /* Models.swift */; };
-		5E610FC8FE20344911419250 /* tinyclip-merges.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4A9B3169B5016EED186FD7E6 /* tinyclip-merges.txt */; };
 		5E71FFACCF04C63AFA6D9E91 /* libPods-RPhoto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BEF9CB92ECEC79359AA4EA89 /* libPods-RPhoto.a */; };
 		6FA4045B4264933FAD54D376 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD95E7661D7CAC690D9D410 /* PhotoLibraryService.swift */; };
 		707F804241F0450F8D0FAF2B /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA585CE614C8ACBD37E89798 /* SwiftDataModels.swift */; };
@@ -30,7 +27,6 @@
 		AC92730638D2DF77271021B6 /* SelectedAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF7897096B1D0F1B881D665 /* SelectedAsset.swift */; };
 		AE844EA4DF8A8432B7C9779B /* ImageNet_class_index.json in Resources */ = {isa = PBXBuildFile; fileRef = B630530C973B14FB75153BE9 /* ImageNet_class_index.json */; };
 		B1D41F2D3C840B715B9BD6EB /* GPT2ByteEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA3FB5DF94FDC2792A8556B /* GPT2ByteEncoder.swift */; };
-		BFC9B09B667F72E3603CE342 /* TinyCLIP_Vision.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 9628250101E0958D0A3E0840 /* TinyCLIP_Vision.mlpackage */; };
 		C09378A9F1A8646303D64459 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F7A7B03784FEDECFB44A8E21 /* CoreML.framework */; };
 		C2E9C1EBC42B8C5A0ABD0393 /* SigLIP2Tokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4247F50410A3E83DFDA2B3D6 /* SigLIP2Tokenizer.swift */; };
 		CCD0CD9D6BD243792BF47C5D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */; };
@@ -52,13 +48,10 @@
 		16FDA9D023B7374E3F1D2621 /* Pods-RPhoto.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RPhoto.debug.xcconfig"; path = "Target Support Files/Pods-RPhoto/Pods-RPhoto.debug.xcconfig"; sourceTree = "<group>"; };
 		1A564A72C779B85E4C922226 /* Pods-RPhoto.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RPhoto.release.xcconfig"; path = "Target Support Files/Pods-RPhoto/Pods-RPhoto.release.xcconfig"; sourceTree = "<group>"; };
 		1BCF91A16A2900418C40BDA2 /* GallerySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GallerySearchView.swift; sourceTree = "<group>"; };
-		1F7C430956D984B8B10E6E52 /* tinyclip-vocab.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tinyclip-vocab.json"; sourceTree = "<group>"; };
 		256E1DE50F15F674EA774ED5 /* SigLIP2_Vision.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = SigLIP2_Vision.mlpackage; sourceTree = "<group>"; };
 		343F28B2F0936263B43FBBB7 /* siglip2-vocab.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "siglip2-vocab.json"; sourceTree = "<group>"; };
 		4247F50410A3E83DFDA2B3D6 /* SigLIP2Tokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigLIP2Tokenizer.swift; sourceTree = "<group>"; };
-		4A9B3169B5016EED186FD7E6 /* tinyclip-merges.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "tinyclip-merges.txt"; sourceTree = "<group>"; };
 		4AF7897096B1D0F1B881D665 /* SelectedAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedAsset.swift; sourceTree = "<group>"; };
-		4C1E7773A58B97F0616354C8 /* TinyCLIP_Text.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = TinyCLIP_Text.mlpackage; sourceTree = "<group>"; };
 		506B827E101A6BFA6F81430A /* MLKitTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLKitTranslationService.swift; sourceTree = "<group>"; };
 		52B4977BD905C2C673014F80 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -71,7 +64,6 @@
 		81AD5EBC238CC2BDF59683D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		82CDC9CBB17895B6E7B7CFDC /* CLIPTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIPTokenizer.swift; sourceTree = "<group>"; };
 		8B575EF31CE0C9A7C7ABE3F5 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		9628250101E0958D0A3E0840 /* TinyCLIP_Vision.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = TinyCLIP_Vision.mlpackage; sourceTree = "<group>"; };
 		9CC8E1473FE3431717952D4F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A297E1D46615EF3F54E2DE16 /* clip-merges.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "clip-merges.txt"; sourceTree = "<group>"; };
 		AA32F9CABB730A8D92DA28DA /* AsyncFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncFactory.swift; sourceTree = "<group>"; };
@@ -166,8 +158,6 @@
 				B630530C973B14FB75153BE9 /* ImageNet_class_index.json */,
 				7B0C43F6AF385877A337068D /* siglip2-merges.txt */,
 				343F28B2F0936263B43FBBB7 /* siglip2-vocab.json */,
-				4A9B3169B5016EED186FD7E6 /* tinyclip-merges.txt */,
-				1F7C430956D984B8B10E6E52 /* tinyclip-vocab.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -209,8 +199,6 @@
 				F773E7DE8EBCB93375A2F29A /* SigLIP2_Text.mlpackage */,
 				256E1DE50F15F674EA774ED5 /* SigLIP2_Vision.mlpackage */,
 				FA585CE614C8ACBD37E89798 /* SwiftDataModels.swift */,
-				4C1E7773A58B97F0616354C8 /* TinyCLIP_Text.mlpackage */,
-				9628250101E0958D0A3E0840 /* TinyCLIP_Vision.mlpackage */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -307,8 +295,6 @@
 				3B424BD163BBE998F8D4090F /* clip-vocab.json in Resources */,
 				9D1EF305DDA52D9105ACDF4E /* siglip2-merges.txt in Resources */,
 				5292C7A82D596A69C4F5B399 /* siglip2-vocab.json in Resources */,
-				5E610FC8FE20344911419250 /* tinyclip-merges.txt in Resources */,
-				12EAB4E23D35B5138F2B3715 /* tinyclip-vocab.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -383,8 +369,6 @@
 				7EBE283F61566A5B4FCE96AD /* SigLIP2_Text.mlpackage in Sources */,
 				0545769C4A429692EEABD087 /* SigLIP2_Vision.mlpackage in Sources */,
 				707F804241F0450F8D0FAF2B /* SwiftDataModels.swift in Sources */,
-				03B27A1C50307CFC5AC54D5D /* TinyCLIP_Text.mlpackage in Sources */,
-				BFC9B09B667F72E3603CE342 /* TinyCLIP_Vision.mlpackage in Sources */,
 				DF01496F230DA151129D12A1 /* Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -454,16 +438,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = U74D23UJBM;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RPhoto/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2;
+				MARKETING_VERSION = 0.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.prokids.RPhoto;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -476,16 +461,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = U74D23UJBM;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RPhoto/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2;
+				MARKETING_VERSION = 0.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.prokids.RPhoto;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

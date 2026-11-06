@@ -500,10 +500,17 @@ class GalleryManager: ObservableObject {
             var image = allImages[index]
 
             if image.image == nil {
-                if let uiImage = await photoLibraryService.loadUIImage(
+                var uiImage = await photoLibraryService.loadUIImage(
                     localIdentifier: image.sourceId,
                     targetSize: thumbnailSize
-                ) {
+                )
+                if uiImage == nil {
+                    uiImage = await photoLibraryService.loadLocalThumbnail(
+                        localIdentifier: image.sourceId,
+                        targetSize: CGSize(width: 300, height: 300)
+                    )
+                }
+                if let uiImage {
                     image.image = uiImage
                     allImages[index].image = uiImage
                 }
@@ -518,7 +525,9 @@ class GalleryManager: ObservableObject {
             }
         }
 
-        displayedImages = resultImages.filter { $0.image != nil }
+        // Keep results even if the thumbnail could not be loaded locally; the view shows a
+        // placeholder instead of silently hiding matches.
+        displayedImages = resultImages
         trimImageCache(keeping: Set(displayedImages.map(\.sourceId)))
     }
 

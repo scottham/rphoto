@@ -627,16 +627,25 @@ struct GallerySearchView: View {
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 2)], spacing: 2) {
                             ForEach(manager.displayedImages) { item in
-                                if let image = item.image {
-                                    NavigationLink(destination: ImageDetailView(galleryImage: item)) {
-                                        ZStack(alignment: .bottomTrailing) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                                                .clipped()
-                                                .aspectRatio(1, contentMode: .fit)
-
+                                NavigationLink(destination: ImageDetailView(galleryImage: item)) {
+                                    // Square cell sized by the grid column width; the image is drawn as an
+                                    // overlay so its intrinsic size can never collapse or distort the cell.
+                                    Color.secondary.opacity(0.12)
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .overlay {
+                                            if let image = item.image {
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            } else {
+                                                Image(systemName: "photo")
+                                                    .font(.title2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .clipped()
+                                        .contentShape(Rectangle())
+                                        .overlay(alignment: .bottomTrailing) {
                                             if !searchText.isEmpty {
                                                 Text(String(format: "%.2f", item.similarityScore))
                                                     .font(.caption2)
@@ -647,8 +656,8 @@ struct GallerySearchView: View {
                                                     .padding(4)
                                             }
                                         }
-                                    }
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
                     }

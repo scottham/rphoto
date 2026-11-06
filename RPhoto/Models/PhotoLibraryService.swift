@@ -120,6 +120,27 @@ struct PhotoLibraryService {
         )
     }
 
+    /// Last-resort local thumbnail: accepts the first (possibly degraded) local image.
+    func loadLocalThumbnail(localIdentifier: String, targetSize: CGSize) async -> UIImage? {
+        guard let asset = fetchAsset(localIdentifier: localIdentifier) else {
+            return nil
+        }
+
+        let options = PHImageRequestOptions()
+        options.isSynchronous = false
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .fastFormat
+        options.resizeMode = .fast
+
+        return await requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill,
+            options: options,
+            degradedImagePolicy: .acceptFirst
+        )
+    }
+
     func loadUIImageForEncoding(localIdentifier: String, targetSize: CGSize) async -> UIImage? {
         guard let asset = fetchAsset(localIdentifier: localIdentifier) else {
             return nil
@@ -197,38 +218,56 @@ struct PhotoLibraryService {
         targetSize: CGSize,
         contentMode: PHImageContentMode,
         options: PHImageRequestOptions,
-        degradedImagePolicy: DegradedImagePolicy
+        degradedImagePolicy: DegradedImagePolicy,
+        timeout: TimeInterval = 8
     ) async -> UIImage? {
-        await withCheckedContinuation { continuation in
-            var hasResumed = false
-            var degradedCandidate: UIImage?
+        let imageManager = self.imageManager
+        let networkAllowed = options.isNetworkAccessAllowed
+
+        return await withCheckedContinuation { continuation in
+            // The result handler may be invoked on arbitrary threads and more than once
+            // (degraded + final), so guard all shared state with a lock.
+            let state = ImageRequestState()
 
             func resumeOnce(_ image: UIImage?) {
-                guard !hasResumed else {
+                guard state.markResumed() else {
                     return
                 }
-                hasResumed = true
                 continuation.resume(returning: image)
             }
 
-            imageManager.requestImage(
+            func fallbackImage() -> UIImage? {
+                switch degradedImagePolicy {
+                case .acceptFirst, .fallbackIfNeeded:
+                    return state.degradedCandidate
+                case .requireNonDegraded:
+                    return nil
+                }
+            }
+
+            let requestID = imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode,
                 options: options
             ) { image, info in
-                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    resumeOnce(nil)
-                    return
-                }
-
-                if info?[PHImageErrorKey] != nil {
-                    resumeOnce(nil)
-                    return
-                }
-
                 let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool ?? false
                 let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool ?? false
+                let isCancelled = info?[PHImageCancelledKey] as? Bool ?? false
+                let hasError = info?[PHImageErrorKey] != nil
+
+                if isCancelled || hasError {
+                    // Newer iOS versions report cloud-only assets (network disabled) via
+                    // PHImageErrorKey (e.g. PHPhotosError.networkAccessRequired) on the final
+                    // callback. Fall back to the local degraded image instead of dropping it.
+                    if let image, degradedImagePolicy != .requireNonDegraded {
+                        resumeOnce(image)
+                    } else {
+                        resumeOnce(fallbackImage())
+                    }
+                    return
+                }
+
                 if isDegraded {
                     guard let image else {
                         return
@@ -238,14 +277,13 @@ struct PhotoLibraryService {
                     case .acceptFirst:
                         resumeOnce(image)
                     case .fallbackIfNeeded:
-                        degradedCandidate = image
-                        if isInCloud && !options.isNetworkAccessAllowed {
+                        state.setDegradedCandidate(image)
+                        if isInCloud && !networkAllowed {
                             // The full-quality image is only in iCloud; return local degraded image directly.
                             resumeOnce(image)
                         }
                     case .requireNonDegraded:
-                        // Encoding path: do not use degraded images.
-                        if isInCloud && !options.isNetworkAccessAllowed {
+                        if isInCloud && !networkAllowed {
                             // Full-quality image is cloud-only and network is disabled.
                             resumeOnce(nil)
                         }
@@ -258,12 +296,17 @@ struct PhotoLibraryService {
                     return
                 }
 
-                switch degradedImagePolicy {
-                case .acceptFirst, .fallbackIfNeeded:
-                    resumeOnce(degradedCandidate)
-                case .requireNonDegraded:
-                    resumeOnce(nil)
+                resumeOnce(fallbackImage())
+            }
+
+            // Safety net: never leave the continuation hanging if Photos does not deliver a
+            // final callback (otherwise the whole search pipeline stalls with no results).
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout) {
+                guard !state.hasResumed else {
+                    return
                 }
+                imageManager.cancelImageRequest(requestID)
+                resumeOnce(fallbackImage())
             }
         }
     }
@@ -317,5 +360,40 @@ struct PhotoLibraryService {
                 }
             }
         }
+    }
+}
+
+private final class ImageRequestState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _hasResumed = false
+    private var _degradedCandidate: UIImage?
+
+    var hasResumed: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _hasResumed
+    }
+
+    var degradedCandidate: UIImage? {
+        lock.lock()
+        defer { lock.unlock() }
+        return _degradedCandidate
+    }
+
+    func setDegradedCandidate(_ image: UIImage) {
+        lock.lock()
+        _degradedCandidate = image
+        lock.unlock()
+    }
+
+    /// Returns true only for the first caller.
+    func markResumed() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !_hasResumed else {
+            return false
+        }
+        _hasResumed = true
+        return true
     }
 }

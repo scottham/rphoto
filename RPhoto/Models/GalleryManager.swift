@@ -55,6 +55,8 @@ class GalleryManager: ObservableObject {
     @Published var newlyLoadedFromCacheCount: Int = 0
 
     private var lastSearchText: String = ""
+    private var searchGeneration = 0
+    private var displayGeneration = 0
     private var model: CLIPEncoder
     private var tokenizer: AsyncFactory<any TextTokenizer>
     private let photoLibraryService = PhotoLibraryService()
@@ -225,8 +227,11 @@ class GalleryManager: ObservableObject {
 
     func search(text: String, context: ModelContext) async {
         lastSearchText = text
+        searchGeneration += 1
+        let generation = searchGeneration
 
         guard !text.isEmpty else {
+            displayGeneration += 1
             displayedImages = []
             trimImageCache(keeping: [])
             isSearching = false
@@ -239,10 +244,13 @@ class GalleryManager: ObservableObject {
         searchProgress = 0
         searchStatusText = "Preparing search index..."
         defer {
-            isSearching = false
+            if generation == searchGeneration {
+                isSearching = false
+            }
         }
 
         await ensureIndexReady(context: context)
+        guard generation == searchGeneration else { return }
         guard !allImages.isEmpty else {
             displayedImages = []
             searchProgress = 1
@@ -270,6 +278,8 @@ class GalleryManager: ObservableObject {
             let (textEmbedding, textEncodeTime) = try await Utils.time {
                 try await model.encode(text: inputBox)
             }
+            // A newer query superseded this one while the text encoder was running.
+            guard generation == searchGeneration else { return }
             guard let normalizedQueryEmbedding = normalizedEmbedding(from: textEmbedding) else {
                 displayedImages = []
                 searchProgress = 0
@@ -285,6 +295,7 @@ class GalleryManager: ObservableObject {
                 progressStart: 0.15,
                 progressSpan: 0.65
             )
+            guard generation == searchGeneration else { return }
             let similarityTime = CFAbsoluteTimeGetCurrent() - similarityStart
 
             let totalSearchTime = CFAbsoluteTimeGetCurrent() - searchStartTime
@@ -300,9 +311,11 @@ class GalleryManager: ObservableObject {
                 searchProgressStart: 0.8,
                 searchProgressSpan: 0.2
             )
+            guard generation == searchGeneration else { return }
             searchProgress = 1
             searchStatusText = "Search completed."
         } catch {
+            guard generation == searchGeneration else { return }
             searchProgress = 0
             searchStatusText = "Search failed."
         }
@@ -482,43 +495,58 @@ class GalleryManager: ObservableObject {
         searchProgressSpan: Double = 0
     ) async {
         if lastSearchText.isEmpty {
+            displayGeneration += 1
             displayedImages = []
             trimImageCache(keeping: [])
             return
         }
 
-        let sortedIndices = allImages.indices.sorted {
-            allImages[$0].similarityScore > allImages[$1].similarityScore
-        }
-        let topIndices = sortedIndices.prefix(topK)
-        let topCount = topIndices.count
+        displayGeneration += 1
+        let generation = displayGeneration
+        let wantedCount = topK
 
+        // Snapshot ranked candidates so concurrent mutations of allImages cannot invalidate indices.
+        let rankedCandidates = allImages.sorted { $0.similarityScore > $1.similarityScore }
         let thumbnailSize = CGSize(width: 600, height: 600)
         var resultImages: [GalleryImage] = []
+        var loadedImages: [String: UIImage] = [:]
+        // Some photos cannot be loaded locally (e.g. iCloud-only, deleted). Skip them and keep
+        // walking down the ranking, but cap attempts so a mostly-unavailable library stays responsive.
+        let maxAttempts = min(rankedCandidates.count, max(wantedCount * 3, wantedCount + 20))
 
-        for (offset, index) in topIndices.enumerated() {
-            var image = allImages[index]
+        for candidate in rankedCandidates.prefix(maxAttempts) {
+            guard resultImages.count < wantedCount else { break }
 
+            var image = candidate
             if image.image == nil {
-                if let uiImage = await photoLibraryService.loadUIImage(
+                image.image = await photoLibraryService.loadUIImage(
                     localIdentifier: image.sourceId,
                     targetSize: thumbnailSize
-                ) {
-                    image.image = uiImage
-                    allImages[index].image = uiImage
-                }
+                )
             }
 
-            resultImages.append(image)
+            // A newer search or Top K change started while we were loading; drop this stale pass.
+            guard generation == displayGeneration else { return }
+
+            if let uiImage = image.image {
+                loadedImages[image.sourceId] = uiImage
+                resultImages.append(image)
+            }
 
             if let searchProgressStart {
-                let fraction = topCount == 0 ? 1 : Double(offset + 1) / Double(topCount)
+                let fraction = wantedCount == 0 ? 1 : Double(resultImages.count) / Double(wantedCount)
                 let progress = searchProgressStart + fraction * searchProgressSpan
                 searchProgress = min(max(progress, 0), 1)
             }
         }
 
-        displayedImages = resultImages.filter { $0.image != nil }
+        for index in allImages.indices {
+            if let uiImage = loadedImages[allImages[index].sourceId] {
+                allImages[index].image = uiImage
+            }
+        }
+
+        displayedImages = resultImages
         trimImageCache(keeping: Set(displayedImages.map(\.sourceId)))
     }
 

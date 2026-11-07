@@ -18,6 +18,7 @@ struct PhotoAssetMetadata {
 
 struct PhotoLibraryService {
     private let imageManager = PHImageManager.default()
+    private let imageRequestTimeout: TimeInterval = 8
 
     private enum DegradedImagePolicy {
         case fallbackIfNeeded
@@ -200,35 +201,52 @@ struct PhotoLibraryService {
         degradedImagePolicy: DegradedImagePolicy
     ) async -> UIImage? {
         await withCheckedContinuation { continuation in
+            // Result handlers and the timeout may run on different threads; guard shared state with a lock.
+            let lock = NSLock()
             var hasResumed = false
             var degradedCandidate: UIImage?
+            var requestId: PHImageRequestID = PHInvalidImageRequestID
 
             func resumeOnce(_ image: UIImage?) {
+                lock.lock()
                 guard !hasResumed else {
+                    lock.unlock()
                     return
                 }
                 hasResumed = true
+                lock.unlock()
                 continuation.resume(returning: image)
             }
 
-            imageManager.requestImage(
+            func fallbackImage() -> UIImage? {
+                switch degradedImagePolicy {
+                case .acceptFirst, .fallbackIfNeeded:
+                    lock.lock()
+                    defer { lock.unlock() }
+                    return degradedCandidate
+                case .requireNonDegraded:
+                    return nil
+                }
+            }
+
+            let id = imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode,
                 options: options
             ) { image, info in
-                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    resumeOnce(nil)
-                    return
-                }
-
-                if info?[PHImageErrorKey] != nil {
-                    resumeOnce(nil)
-                    return
-                }
-
+                let isCancelled = info?[PHImageCancelledKey] as? Bool ?? false
+                let hasError = info?[PHImageErrorKey] != nil
                 let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool ?? false
                 let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool ?? false
+
+                // Cloud-only assets with network disabled often finish with an error or nil image;
+                // fall back to the local degraded thumbnail delivered earlier instead of dropping the photo.
+                if isCancelled || hasError {
+                    resumeOnce(image ?? fallbackImage())
+                    return
+                }
+
                 if isDegraded {
                     guard let image else {
                         return
@@ -238,7 +256,9 @@ struct PhotoLibraryService {
                     case .acceptFirst:
                         resumeOnce(image)
                     case .fallbackIfNeeded:
+                        lock.lock()
                         degradedCandidate = image
+                        lock.unlock()
                         if isInCloud && !options.isNetworkAccessAllowed {
                             // The full-quality image is only in iCloud; return local degraded image directly.
                             resumeOnce(image)
@@ -253,17 +273,22 @@ struct PhotoLibraryService {
                     return
                 }
 
-                if let image {
-                    resumeOnce(image)
-                    return
-                }
+                resumeOnce(image ?? fallbackImage())
+            }
 
-                switch degradedImagePolicy {
-                case .acceptFirst, .fallbackIfNeeded:
-                    resumeOnce(degradedCandidate)
-                case .requireNonDegraded:
-                    resumeOnce(nil)
-                }
+            lock.lock()
+            requestId = id
+            lock.unlock()
+
+            // Never let a stuck PhotoKit request block the caller (e.g. search results loading forever).
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + imageRequestTimeout) {
+                lock.lock()
+                let pending = !hasResumed
+                let pendingId = requestId
+                lock.unlock()
+                guard pending else { return }
+                imageManager.cancelImageRequest(pendingId)
+                resumeOnce(fallbackImage())
             }
         }
     }

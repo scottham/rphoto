@@ -163,12 +163,8 @@ private extension ImageDetailView {
                 )
                 infoRow(
                     title: "Location",
-                    value: metadata?.locationName ?? "Unknown"
+                    value: metadata?.coordinateText ?? "Unknown"
                 )
-
-                if let coordinate = metadata?.coordinateText {
-                    infoRow(title: "Coordinates", value: coordinate)
-                }
 
                 if let metadata {
                     infoRow(

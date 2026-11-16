@@ -4,13 +4,11 @@
 //
 
 import Foundation
-import CoreLocation
 import Photos
 import UIKit
 
 struct PhotoAssetMetadata {
     let creationDate: Date?
-    let locationName: String?
     let coordinateText: String?
     let pixelWidth: Int
     let pixelHeight: Int
@@ -168,7 +166,7 @@ struct PhotoLibraryService {
             return nil
         }
 
-        var locationName: String?
+        // Show raw coordinates only: reverse geocoding needs the network and the app stays fully offline.
         var coordinateText: String?
         if let location = asset.location {
             coordinateText = String(
@@ -176,12 +174,10 @@ struct PhotoLibraryService {
                 location.coordinate.latitude,
                 location.coordinate.longitude
             )
-            locationName = await reverseGeocodeLocationName(location)
         }
 
         return PhotoAssetMetadata(
             creationDate: asset.creationDate,
-            locationName: locationName,
             coordinateText: coordinateText,
             pixelWidth: asset.pixelWidth,
             pixelHeight: asset.pixelHeight
@@ -313,34 +309,5 @@ struct PhotoLibraryService {
             controller = presented
         }
         return controller
-    }
-
-    private func reverseGeocodeLocationName(_ location: CLLocation) async -> String? {
-        let geocoder = CLGeocoder()
-
-        return await withCheckedContinuation { continuation in
-            geocoder.reverseGeocodeLocation(location) { placemarks, _ in
-                let components = [
-                    placemarks?.first?.name,
-                    placemarks?.first?.locality,
-                    placemarks?.first?.administrativeArea,
-                    placemarks?.first?.country
-                ]
-                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-
-                let uniqueComponents = components.reduce(into: [String]()) { partialResult, value in
-                    if !partialResult.contains(value) {
-                        partialResult.append(value)
-                    }
-                }
-
-                if uniqueComponents.isEmpty {
-                    continuation.resume(returning: nil)
-                } else {
-                    continuation.resume(returning: uniqueComponents.joined(separator: ", "))
-                }
-            }
-        }
     }
 }

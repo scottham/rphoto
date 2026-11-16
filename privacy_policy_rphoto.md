@@ -1,6 +1,6 @@
 # RPhoto Privacy Policy
 
-Last updated: February 17, 2026
+Last updated: November 16, 2026
 
 ## 1. Overview
 
@@ -13,31 +13,23 @@ RPhoto may process the following data locally:
 - Selected photo local identifiers and image data available on-device.
 - Generated image embeddings used for semantic retrieval.
 - Search query text.
-- Translation model download state.
 
 ## 3. How We Use This Data
 
 The data above is used only to provide app functionality, including:
 
 - Building and updating the local search index.
-- Running semantic photo search.
-- Translating non-English queries to English for search.
+- Running semantic photo search. Queries in any language are encoded directly by the on-device model; no translation service is used.
 
 ## 4. Network Usage
 
-- Core photo search and embedding generation run locally.
-- When you use a non-English query language for the first time, RPhoto may request your confirmation to download a Google ML Kit translation model.
-- Translation model downloads may use Wi-Fi or cellular data.
-- After model download, translation can run offline.
+- RPhoto does not use the network. Photo indexing, search, and all models run entirely on your device.
+- No photos, search queries, or usage data are sent off the device.
 - RPhoto configures photo loading to avoid triggering iCloud original downloads. If only iCloud originals exist, RPhoto uses local available representations (for example, thumbnails) when possible.
 
 ## 5. Third-Party Technology
 
-RPhoto uses Google ML Kit Translation for on-device translation models.
-
-- Attribution: Powered by Google Translate.
-- Attribution requirements: https://cloud.google.com/translate/attribution
-- Google Privacy Policy: https://policies.google.com/privacy
+Semantic search uses Google's SigLIP 2 model (Apache License 2.0), converted to run on-device with Core ML. The model is bundled with the app and does not communicate with Google or any other service.
 
 ## 6. Permissions
 

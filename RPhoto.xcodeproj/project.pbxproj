@@ -17,7 +17,6 @@
 		4C118A89F6E1A9398610F42A /* RPhotoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5D3DBF5A4BEEDBF5D37068 /* RPhotoApp.swift */; };
 		5292C7A82D596A69C4F5B399 /* siglip2-vocab.json in Resources */ = {isa = PBXBuildFile; fileRef = 343F28B2F0936263B43FBBB7 /* siglip2-vocab.json */; };
 		5BA78197BABF4DB94A304C5D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B575EF31CE0C9A7C7ABE3F5 /* Models.swift */; };
-		5E71FFACCF04C63AFA6D9E91 /* libPods-RPhoto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BEF9CB92ECEC79359AA4EA89 /* libPods-RPhoto.a */; };
 		6FA4045B4264933FAD54D376 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD95E7661D7CAC690D9D410 /* PhotoLibraryService.swift */; };
 		707F804241F0450F8D0FAF2B /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA585CE614C8ACBD37E89798 /* SwiftDataModels.swift */; };
 		7BD0BDD27A5681E045E77953 /* ImageDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15713FC47715CFA64076CA74 /* ImageDetailView.swift */; };
@@ -32,7 +31,6 @@
 		CCD0CD9D6BD243792BF47C5D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */; };
 		D21C706BD7AF48F11EAA5DAA /* GalleryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C241D7FDB335A41400C978D1 /* GalleryManager.swift */; };
 		DBB6E2883AF64597ED084BF1 /* AsyncFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA32F9CABB730A8D92DA28DA /* AsyncFactory.swift */; };
-		DDEAD3CCED527800EB229210 /* MLKitTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 506B827E101A6BFA6F81430A /* MLKitTranslationService.swift */; };
 		DF01496F230DA151129D12A1 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07338089F39EF6E490F6FC0 /* Utils.swift */; };
 		E275A005AECF4ECCBBAE6A86 /* GalleryNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86D047C48C2DF3414F4DF7D /* GalleryNotifications.swift */; };
 		E85000C088B6AC636339EDF4 /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D465F02A628D00D87C24D88E /* PhotosUI.framework */; };
@@ -45,14 +43,11 @@
 /* Begin PBXFileReference section */
 		0B0B8B229F7B2D5867266D99 /* RPhoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		15713FC47715CFA64076CA74 /* ImageDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDetailView.swift; sourceTree = "<group>"; };
-		16FDA9D023B7374E3F1D2621 /* Pods-RPhoto.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RPhoto.debug.xcconfig"; path = "Target Support Files/Pods-RPhoto/Pods-RPhoto.debug.xcconfig"; sourceTree = "<group>"; };
-		1A564A72C779B85E4C922226 /* Pods-RPhoto.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RPhoto.release.xcconfig"; path = "Target Support Files/Pods-RPhoto/Pods-RPhoto.release.xcconfig"; sourceTree = "<group>"; };
 		1BCF91A16A2900418C40BDA2 /* GallerySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GallerySearchView.swift; sourceTree = "<group>"; };
 		256E1DE50F15F674EA774ED5 /* SigLIP2_Vision.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = SigLIP2_Vision.mlpackage; sourceTree = "<group>"; };
 		343F28B2F0936263B43FBBB7 /* siglip2-vocab.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "siglip2-vocab.json"; sourceTree = "<group>"; };
 		4247F50410A3E83DFDA2B3D6 /* SigLIP2Tokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigLIP2Tokenizer.swift; sourceTree = "<group>"; };
 		4AF7897096B1D0F1B881D665 /* SelectedAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedAsset.swift; sourceTree = "<group>"; };
-		506B827E101A6BFA6F81430A /* MLKitTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLKitTranslationService.swift; sourceTree = "<group>"; };
 		52B4977BD905C2C673014F80 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		5805CB0954F7A92F46CCD37F /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		6055DF159738DFDFDD2E1677 /* CacheDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheDebugView.swift; sourceTree = "<group>"; };
@@ -70,7 +65,6 @@
 		B07338089F39EF6E490F6FC0 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		B630530C973B14FB75153BE9 /* ImageNet_class_index.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ImageNet_class_index.json; sourceTree = "<group>"; };
 		BD549C1003A6D12962B2F37E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		BEF9CB92ECEC79359AA4EA89 /* libPods-RPhoto.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-RPhoto.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C241D7FDB335A41400C978D1 /* GalleryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryManager.swift; sourceTree = "<group>"; };
 		C4AD3735BD3265D0DA622DAC /* bbox_hierarchy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = bbox_hierarchy.json; sourceTree = "<group>"; };
 		D1180F2407C096DBE4E6469D /* Build.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Build.xcconfig; sourceTree = "<group>"; };
@@ -92,7 +86,6 @@
 				440FACF89B33D82ACCB9DF81 /* Vision.framework in Frameworks */,
 				C09378A9F1A8646303D64459 /* CoreML.framework in Frameworks */,
 				E85000C088B6AC636339EDF4 /* PhotosUI.framework in Frameworks */,
-				5E71FFACCF04C63AFA6D9E91 /* libPods-RPhoto.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -135,7 +128,6 @@
 				C62C79D3629A228F13CC6B29 /* Models */,
 				B2A86F630D757EC634CFA397 /* Preview Content */,
 				33639D8A45CDA3EE478F404E /* Resources */,
-				C96D042FE8626C0A3F7115DC /* Services */,
 				23731CF9A2E0C96E9815F3C6 /* Tokenizer */,
 				194173DC37A935A8C5E61AAA /* Views */,
 				81AD5EBC238CC2BDF59683D8 /* Assets.xcassets */,
@@ -162,22 +154,12 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		61A8B8E469CEA8AE8DBF333D /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				16FDA9D023B7374E3F1D2621 /* Pods-RPhoto.debug.xcconfig */,
-				1A564A72C779B85E4C922226 /* Pods-RPhoto.release.xcconfig */,
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		A365C604F55D4109188DFFC3 = {
 			isa = PBXGroup;
 			children = (
 				2586AAABC1F5C66AE05AFB40 /* RPhoto */,
 				F00983F1CF7C5DA16DB6BA99 /* Frameworks */,
 				0F81A4CCA387237F3FD762F0 /* Products */,
-				61A8B8E469CEA8AE8DBF333D /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -203,14 +185,6 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		C96D042FE8626C0A3F7115DC /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				506B827E101A6BFA6F81430A /* MLKitTranslationService.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
 		EE2AD5101C00BB09F754B00F /* Configuration */ = {
 			isa = PBXGroup;
 			children = (
@@ -226,7 +200,6 @@
 				D465F02A628D00D87C24D88E /* PhotosUI.framework */,
 				52B4977BD905C2C673014F80 /* SwiftUI.framework */,
 				DA2C7D1BCFDD7934E8E8F1D5 /* Vision.framework */,
-				BEF9CB92ECEC79359AA4EA89 /* libPods-RPhoto.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -238,11 +211,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1AEDCF08B19C3AB09AB27C81 /* Build configuration list for PBXNativeTarget "RPhoto" */;
 			buildPhases = (
-				BD74AA26D6664A7FE655B971 /* [CP] Check Pods Manifest.lock */,
 				730EBA7075788DA591478001 /* Sources */,
 				1F0AA3DFDEB22F5C1F3F7909 /* Resources */,
 				DA533BCD4788025616658519 /* Frameworks */,
-				5E6D266426CE6653348D1C69 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -300,52 +271,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		5E6D266426CE6653348D1C69 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-RPhoto/Pods-RPhoto-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-RPhoto/Pods-RPhoto-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-RPhoto/Pods-RPhoto-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		BD74AA26D6664A7FE655B971 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-RPhoto-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		730EBA7075788DA591478001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -360,7 +285,6 @@
 				E275A005AECF4ECCBBAE6A86 /* GalleryNotifications.swift in Sources */,
 				15F3AB41D39F540601E03F97 /* GallerySearchView.swift in Sources */,
 				7BD0BDD27A5681E045E77953 /* ImageDetailView.swift in Sources */,
-				DDEAD3CCED527800EB229210 /* MLKitTranslationService.swift in Sources */,
 				5BA78197BABF4DB94A304C5D /* Models.swift in Sources */,
 				6FA4045B4264933FAD54D376 /* PhotoLibraryService.swift in Sources */,
 				4C118A89F6E1A9398610F42A /* RPhotoApp.swift in Sources */,
@@ -434,7 +358,6 @@
 		};
 		984B4A5E084EE6F2D38A32E5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 16FDA9D023B7374E3F1D2621 /* Pods-RPhoto.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -457,7 +380,6 @@
 		};
 		BB19A0D2167210C13E6A2874 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1A564A72C779B85E4C922226 /* Pods-RPhoto.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";

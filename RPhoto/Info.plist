@@ -25,7 +25,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>RPhoto needs photo library access to index and search the photos you select. All processing stays on your device, and your photos are not uploaded.</string>
+	<string>RecallPic needs photo library access to index and search the photos you select. All processing stays on your device, and your photos are not uploaded.</string>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

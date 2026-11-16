@@ -29,7 +29,7 @@ private struct PrivacyPolicyView: View {
 
                     policySection(
                         title: "Overview",
-                        body: "RPhoto provides semantic photo search on your device. Photo indexing, embedding generation, and retrieval are designed to run locally inside the app sandbox."
+                        body: "RecallPic provides semantic photo search on your device. Photo indexing, embedding generation, and retrieval are designed to run locally inside the app sandbox."
                     )
 
                     policySection(

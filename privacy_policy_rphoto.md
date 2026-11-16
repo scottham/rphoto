@@ -1,14 +1,14 @@
-# RPhoto Privacy Policy
+# RecallPic Privacy Policy
 
 Last updated: November 16, 2026
 
 ## 1. Overview
 
-RPhoto is designed for on-device semantic photo search. Photo indexing, embedding generation, and retrieval are intended to run locally on your device.
+RecallPic is designed for on-device semantic photo search. Photo indexing, embedding generation, and retrieval are intended to run locally on your device.
 
 ## 2. Data Processed On Device
 
-RPhoto may process the following data locally:
+RecallPic may process the following data locally:
 
 - Selected photo local identifiers and image data available on-device.
 - Generated image embeddings used for semantic retrieval.
@@ -23,9 +23,9 @@ The data above is used only to provide app functionality, including:
 
 ## 4. Network Usage
 
-- RPhoto does not use the network. Photo indexing, search, and all models run entirely on your device.
+- RecallPic does not use the network. Photo indexing, search, and all models run entirely on your device.
 - No photos, search queries, or usage data are sent off the device.
-- RPhoto configures photo loading to avoid triggering iCloud original downloads. If only iCloud originals exist, RPhoto uses local available representations (for example, thumbnails) when possible.
+- RecallPic configures photo loading to avoid triggering iCloud original downloads. If only iCloud originals exist, RecallPic uses local available representations (for example, thumbnails) when possible.
 
 ## 5. Third-Party Technology
 
@@ -33,7 +33,7 @@ Semantic search uses Google's SigLIP 2 model (Apache License 2.0), converted to 
 
 ## 6. Permissions
 
-RPhoto requests photo library access to search selected photos. You can change or revoke this permission at any time in iOS Settings.
+RecallPic requests photo library access to search selected photos. You can change or revoke this permission at any time in iOS Settings.
 
 ## 7. Data Retention and Deletion
 
